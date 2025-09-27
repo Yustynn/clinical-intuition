@@ -1,0 +1,30 @@
+# Clinical Trial Prediction Market System
+# Python 3.13+ required
+
+# Core dependencies
+click>=8.1.7                # CLI framework
+loguru>=0.7.2              # Structured logging
+pydantic>=2.8.0            # Data validation (for LLM structured outputs)
+PyYAML>=6.0.1              # Configuration management
+
+# Data processing
+requests>=2.31.0           # HTTP client for API calls
+urllib3>=2.0.0            # URL handling
+
+# LLM integration  
+openai>=1.40.0            # OpenAI API client (GPT-4o-mini)
+
+# Development and testing
+pytest>=8.2.0            # Testing framework
+pytest-cov>=5.0.0        # Coverage reporting
+black>=24.4.2             # Code formatting
+flake8>=7.1.0             # Linting
+mypy>=1.10.0              # Type checking
+
+# Optional: Web framework for future API
+fastapi>=0.111.0          # Web framework (for Phase 6)
+uvicorn>=0.30.0           # ASGI server
+
+# Optional: Advanced text processing
+textstat>=0.7.3           # Readability metrics (Flesch-Kincaid)
+nltk>=3.8.1               # Natural language toolkit

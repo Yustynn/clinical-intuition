@@ -1,0 +1,21 @@
+{
+  "nct_id": "NCT12345",
+  "brief_title": "Test Study",
+  "official_title": null,
+  "conditions": [],
+  "phase": null,
+  "study_type": null,
+  "overall_status": "COMPLETED",
+  "why_stopped": null,
+  "has_results": false,
+  "first_posted": null,
+  "results_first_posted": null,
+  "last_update_posted": null,
+  "sponsor": {},
+  "countries": [],
+  "raw_data": null,
+  "created_at": "2025-09-27T18:05:48.891918",
+  "updated_at": "2025-09-27T18:05:48.891743",
+  "_id": "NCT12345",
+  "_updated_at": "2025-09-27T18:05:48.891957"
+}
