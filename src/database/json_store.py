@@ -2,7 +2,7 @@
 JSON-based data storage for development and prototyping.
 """
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from dataclasses import asdict
@@ -72,7 +72,7 @@ class JSONStore:
         
         # Add metadata
         data["_id"] = item_id
-        data["_updated_at"] = datetime.utcnow().isoformat()
+        data["_updated_at"] = datetime.now(UTC).isoformat()
         
         with open(file_path, 'w') as f:
             json.dump(data, f, cls=JSONEncoder, indent=2)
@@ -103,10 +103,10 @@ class JSONStore:
     def save_study(self, study: Study) -> str:
         """Save a study and return its ID"""
         study_id = study.nct_id
-        study.updated_at = datetime.utcnow()
+        study.updated_at = datetime.now(UTC)
         
         if study.created_at is None:
-            study.created_at = datetime.utcnow()
+            study.created_at = datetime.now(UTC)
         
         data = asdict(study)
         self._save_item("study", study_id, data)
@@ -140,7 +140,7 @@ class JSONStore:
         if not endpoint.id:
             endpoint.id = self._generate_id()
         
-        endpoint.created_at = datetime.utcnow()
+        endpoint.created_at = datetime.now(UTC)
         
         data = asdict(endpoint)
         self._save_item("endpoint", endpoint.id, data)
@@ -176,7 +176,7 @@ class JSONStore:
     def save_result(self, result: ResultNorm) -> str:
         """Save a result and return its ID"""
         result_id = f"result_{result.endpoint_id}"
-        result.created_at = datetime.utcnow()
+        result.created_at = datetime.now(UTC)
         
         data = asdict(result)
         self._save_item("result", result_id, data)
@@ -211,7 +211,7 @@ class JSONStore:
             card.id = self._generate_id()
         
         if card.created_at is None:
-            card.created_at = datetime.utcnow()
+            card.created_at = datetime.now(UTC)
         
         data = asdict(card)
         self._save_item("card", card.id, data)
@@ -259,7 +259,7 @@ class JSONStore:
             play.id = self._generate_id()
         
         if play.created_at is None:
-            play.created_at = datetime.utcnow()
+            play.created_at = datetime.now(UTC)
         
         data = asdict(play)
         self._save_item("play", play.id, data)
