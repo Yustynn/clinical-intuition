@@ -61,7 +61,7 @@ class TestStudy:
         assert study.brief_title == "Test Clinical Trial for Behavioral Intervention"
         assert study.conditions == ["Depression", "Anxiety"]
         assert study.has_results is True
-        assert study.sponsor == {"name": "Test University", "class": "Other"}
+        assert study.sponsor == "Test University"
         
     def test_study_status_string_conversion(self):
         """Test automatic string to enum conversion for study status"""

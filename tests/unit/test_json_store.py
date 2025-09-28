@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from database.json_store import JSONStore, JSONEncoder
+from storage.json_store import JSONStore, JSONEncoder
 from models.core import (
     Study, StudyStatus, Endpoint, DirectionNorm, 
     ResultNorm, SuccessLabel, ConfidenceLevel,

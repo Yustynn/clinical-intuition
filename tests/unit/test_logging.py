@@ -110,7 +110,7 @@ class TestLoggingIntegration:
     
     def test_logging_with_json_store(self, temp_dir):
         """Test that logging works with JSON store operations"""
-        from database.json_store import JSONStore
+        from storage.json_store import JSONStore
         from models.core import Study
         
         # Setup logging

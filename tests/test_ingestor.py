@@ -1,0 +1,439 @@
+"""
+Tests for the clinical trial ingestor components.
+"""
+import pytest
+import json
+from unittest.mock import Mock, patch, MagicMock
+from pathlib import Path
+from datetime import datetime, UTC
+
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from ingestion.api.client import ClinicalTrialsAPIClient, APIConfig
+from ingestion.processing.field_mapper import ClinicalTrialsFieldMapper
+from ingestion.orchestrator import ClinicalTrialIngestor, IngestionConfig, IngestionStats
+from storage.json_store import JSONStore
+from models.core import Study, StudyStatus
+
+
+class TestAPIClient:
+    """Test the ClinicalTrials.gov API client"""
+    
+    def setup_method(self):
+        """Set up test fixtures"""
+        self.api_client = ClinicalTrialsAPIClient()
+        
+    def test_api_config_defaults(self):
+        """Test API configuration defaults"""
+        config = APIConfig()
+        assert config.base_url == "https://clinicaltrials.gov/api/v2/studies"
+        assert config.page_size == 1000
+        assert config.max_pages == 50
+        assert config.timeout == 30
+        
+    def test_build_request_url_basic(self):
+        """Test basic URL building"""
+        url = self.api_client._build_request_url()
+        assert "pageSize=1000" in url
+        assert "fields=" in url
+        assert "protocolSection.identificationModule.nctId" in url
+        
+    def test_build_request_url_with_filters(self):
+        """Test URL building with filters"""
+        filters = {"intervention_type": "BEHAVIORAL"}
+        url = self.api_client._build_request_url(query_filters=filters)
+        assert "query.term=AREA%5BInterventionType%5DBEHAVIORAL" in url
+        
+    def test_build_request_url_with_conditions(self):
+        """Test URL building with condition filters"""
+        filters = {"conditions": ["Depression", "Anxiety"]}
+        url = self.api_client._build_request_url(query_filters=filters)
+        assert "AREA%5BCondition%5DDepression" in url
+        assert "AREA%5BCondition%5DAnxiety" in url
+        
+    def test_build_request_url_with_pagination(self):
+        """Test URL building with pagination token"""
+        url = self.api_client._build_request_url(page_token="test_token")
+        assert "pageToken=test_token" in url
+        
+    @patch('urllib.request.urlopen')
+    def test_make_request_success(self, mock_urlopen):
+        """Test successful API request"""
+        # Mock response
+        mock_response = Mock()
+        mock_response.status = 200
+        mock_response.read.return_value = b'{"studies": [], "totalCount": 0}'
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        result = self.api_client._make_request("http://test.com")
+        assert "studies" in result
+        assert result["totalCount"] == 0
+        
+    @patch('urllib.request.urlopen')
+    def test_make_request_http_error(self, mock_urlopen):
+        """Test API request with HTTP error"""
+        mock_response = Mock()
+        mock_response.status = 400
+        mock_response.reason = "Bad Request"
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        with pytest.raises(Exception, match="HTTP 400"):
+            self.api_client._make_request("http://test.com")
+            
+    def test_filter_studies_has_results(self):
+        """Test post-processing filter for hasResults"""
+        studies = [
+            {"hasResults": True, "protocolSection": {}},
+            {"hasResults": False, "protocolSection": {}},
+            {"hasResults": True, "protocolSection": {}}
+        ]
+        
+        filters = {"has_results": True}
+        filtered = self.api_client._filter_studies(studies, filters)
+        
+        assert len(filtered) == 2
+        assert all(s["hasResults"] for s in filtered)
+        
+    def test_filter_studies_status(self):
+        """Test post-processing filter for study status"""
+        studies = [
+            {"protocolSection": {"statusModule": {"overallStatus": "COMPLETED"}}},
+            {"protocolSection": {"statusModule": {"overallStatus": "RECRUITING"}}},
+            {"protocolSection": {"statusModule": {"overallStatus": "COMPLETED"}}}
+        ]
+        
+        filters = {"overall_status": ["COMPLETED"]}
+        filtered = self.api_client._filter_studies(studies, filters)
+        
+        assert len(filtered) == 2
+        
+    def test_filter_studies_study_type(self):
+        """Test post-processing filter for study type"""
+        studies = [
+            {"protocolSection": {"designModule": {"studyType": "INTERVENTIONAL"}}},
+            {"protocolSection": {"designModule": {"studyType": "OBSERVATIONAL"}}},
+            {"protocolSection": {"designModule": {"studyType": "INTERVENTIONAL"}}}
+        ]
+        
+        filters = {"study_type": "INTERVENTIONAL"}
+        filtered = self.api_client._filter_studies(studies, filters)
+        
+        assert len(filtered) == 2
+
+
+class TestIngestor:
+    """Test the main ingestor functionality"""
+    
+    def setup_method(self):
+        """Set up test fixtures"""
+        self.mock_store = Mock(spec=JSONStore)
+        self.mock_store.get_study.return_value = None  # No existing studies
+        self.mock_store.save_study.return_value = "test_id"
+        
+        self.api_config = APIConfig(page_size=10, max_pages=1)
+        self.ingestion_config = IngestionConfig(
+            max_studies_per_run=5,
+            filter_has_results_only=True,
+            filter_completed_only=True,
+            save_raw_data=False
+        )
+        
+        self.ingestor = ClinicalTrialIngestor(
+            self.mock_store, 
+            self.api_config, 
+            self.ingestion_config
+        )
+        
+    def test_build_query_filters(self):
+        """Test building query filters"""
+        filters = self.ingestor.build_query_filters()
+        assert filters["intervention_type"] == "BEHAVIORAL"
+        
+        custom_filters = {"conditions": ["Depression"]}
+        filters = self.ingestor.build_query_filters(custom_filters)
+        assert "conditions" in filters
+        assert filters["intervention_type"] == "BEHAVIORAL"
+        
+    def test_should_process_study_valid(self):
+        """Test study filtering for valid study"""
+        valid_study = {
+            "hasResults": True,
+            "protocolSection": {
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        should_process, reason = self.ingestor.should_process_study(valid_study)
+        assert should_process == True
+        assert reason == ""
+        
+    def test_should_process_study_no_results(self):
+        """Test study filtering for study without results"""
+        study_no_results = {
+            "hasResults": False,
+            "protocolSection": {
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        should_process, reason = self.ingestor.should_process_study(study_no_results)
+        assert should_process == False
+        assert "No results posted" in reason
+        
+    def test_should_process_study_not_interventional(self):
+        """Test study filtering for non-interventional study"""
+        observational_study = {
+            "hasResults": True,
+            "protocolSection": {
+                "designModule": {"studyType": "OBSERVATIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        should_process, reason = self.ingestor.should_process_study(observational_study)
+        assert should_process == False
+        assert "Not interventional study" in reason
+        
+    def test_should_process_study_wrong_status(self):
+        """Test study filtering for wrong status"""
+        wrong_status_study = {
+            "hasResults": True,
+            "protocolSection": {
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "RECRUITING"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        should_process, reason = self.ingestor.should_process_study(wrong_status_study)
+        assert should_process == False
+        assert "not in allowed statuses" in reason
+        
+    def test_should_process_study_no_interventions(self):
+        """Test study filtering for study without interventions"""
+        no_interventions_study = {
+            "hasResults": True,
+            "protocolSection": {
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": []},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        should_process, reason = self.ingestor.should_process_study(no_interventions_study)
+        assert should_process == False
+        assert "No interventions defined" in reason
+        
+    def test_should_process_study_no_outcomes(self):
+        """Test study filtering for study without primary outcomes"""
+        no_outcomes_study = {
+            "hasResults": True,
+            "protocolSection": {
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": []}
+            }
+        }
+        
+        should_process, reason = self.ingestor.should_process_study(no_outcomes_study)
+        assert should_process == False
+        assert "No primary outcomes defined" in reason
+        
+    def test_process_single_study_success(self):
+        """Test successful processing of a single study"""
+        valid_study = {
+            "hasResults": True,
+            "protocolSection": {
+                "identificationModule": {"nctId": "NCT12345678", "briefTitle": "Test Study"},
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test", "type": "BEHAVIORAL"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test Outcome"}]}
+            }
+        }
+        
+        success, study, error = self.ingestor.process_single_study(valid_study)
+        
+        assert success == True
+        assert isinstance(study, Study)
+        assert study.nct_id == "NCT12345678"
+        assert error == ""
+        self.mock_store.save_study.assert_called_once()
+        
+    def test_process_single_study_already_exists(self):
+        """Test processing study that already exists"""
+        existing_study = Mock(spec=Study)
+        self.mock_store.get_study.return_value = existing_study
+        
+        study_data = {
+            "hasResults": True,
+            "protocolSection": {
+                "identificationModule": {"nctId": "NCT12345678"},
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        success, study, error = self.ingestor.process_single_study(study_data)
+        
+        assert success == False
+        assert study == existing_study
+        assert "Already exists" in error
+        
+    def test_process_single_study_filtering_failure(self):
+        """Test processing study that fails filtering"""
+        invalid_study = {
+            "hasResults": False,
+            "protocolSection": {
+                "identificationModule": {"nctId": "NCT12345678"},
+                "designModule": {"studyType": "INTERVENTIONAL"},
+                "statusModule": {"overallStatus": "COMPLETED"},
+                "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+            }
+        }
+        
+        success, study, error = self.ingestor.process_single_study(invalid_study)
+        
+        assert success == False
+        assert study is None
+        assert "No results posted" in error
+
+
+class TestIngestionStats:
+    """Test ingestion statistics tracking"""
+    
+    def test_ingestion_stats_initialization(self):
+        """Test stats initialization"""
+        stats = IngestionStats()
+        assert stats.total_fetched == 0
+        assert stats.successfully_processed == 0
+        assert stats.failed_processing == 0
+        assert stats.duplicate_studies == 0
+        assert stats.studies_with_results == 0
+        
+    def test_ingestion_stats_success_rate(self):
+        """Test success rate calculation"""
+        stats = IngestionStats()
+        assert stats.success_rate == 0.0
+        
+        stats.total_fetched = 100
+        stats.successfully_processed = 25
+        assert stats.success_rate == 0.25
+        
+    def test_ingestion_stats_duration(self):
+        """Test duration calculation"""
+        stats = IngestionStats()
+        assert stats.duration_seconds == 0.0
+        
+        start_time = datetime.now(UTC)
+        end_time = datetime.now(UTC)
+        stats.start_time = start_time
+        stats.end_time = end_time
+        
+        # Duration should be very small (near 0) for same timestamp
+        assert stats.duration_seconds >= 0
+
+
+class TestIngestionConfig:
+    """Test ingestion configuration"""
+    
+    def test_ingestion_config_defaults(self):
+        """Test default configuration values"""
+        config = IngestionConfig()
+        assert config.max_studies_per_run == 5000
+        assert config.batch_size == 100
+        assert config.retry_attempts == 3
+        assert config.retry_delay == 1.0
+        assert config.filter_has_results_only == True
+        assert config.filter_completed_only == True
+        assert config.save_raw_data == True
+        assert config.continue_on_error == True
+        
+    def test_ingestion_config_custom(self):
+        """Test custom configuration"""
+        config = IngestionConfig(
+            max_studies_per_run=1000,
+            filter_has_results_only=False,
+            save_raw_data=False
+        )
+        assert config.max_studies_per_run == 1000
+        assert config.filter_has_results_only == False
+        assert config.save_raw_data == False
+        # Should keep defaults for other values
+        assert config.batch_size == 100
+
+
+# Integration tests
+class TestIngestorIntegration:
+    """Integration tests for the full ingestor pipeline"""
+    
+    @patch('ingestion.orchestrator.ClinicalTrialIngestor.test_connection')
+    @patch('ingestion.api.client.ClinicalTrialsAPIClient.fetch_studies_stream')
+    def test_ingest_studies_full_pipeline(self, mock_fetch_stream, mock_test_connection):
+        """Test the full ingestion pipeline"""
+        # Setup mocks
+        mock_test_connection.return_value = True
+        
+        mock_studies = [
+            {
+                "hasResults": True,
+                "protocolSection": {
+                    "identificationModule": {"nctId": "NCT12345678", "briefTitle": "Test Study 1"},
+                    "designModule": {"studyType": "INTERVENTIONAL"},
+                    "statusModule": {"overallStatus": "COMPLETED"},
+                    "armsInterventionsModule": {"interventions": [{"name": "Test", "type": "BEHAVIORAL"}]},
+                    "outcomesModule": {"primaryOutcomes": [{"measure": "Test Outcome"}]}
+                }
+            },
+            {
+                "hasResults": False,  # This should be filtered out
+                "protocolSection": {
+                    "identificationModule": {"nctId": "NCT87654321", "briefTitle": "Test Study 2"},
+                    "designModule": {"studyType": "INTERVENTIONAL"},
+                    "statusModule": {"overallStatus": "COMPLETED"},
+                    "armsInterventionsModule": {"interventions": [{"name": "Test"}]},
+                    "outcomesModule": {"primaryOutcomes": [{"measure": "Test"}]}
+                }
+            }
+        ]
+        mock_fetch_stream.return_value = iter(mock_studies)
+        
+        # Setup ingestor
+        mock_store = Mock(spec=JSONStore)
+        mock_store.get_study.return_value = None
+        mock_store.save_study.return_value = "test_id"
+        mock_store.get_stats.return_value = {"studies": 1}
+        
+        config = IngestionConfig(max_studies_per_run=2, save_raw_data=False)
+        ingestor = ClinicalTrialIngestor(mock_store, None, config)
+        
+        # Run ingestion
+        stats = ingestor.ingest_studies()
+        
+        # Verify results
+        assert stats.total_fetched == 2
+        assert stats.successfully_processed == 1  # Only the one with results
+        assert stats.failed_processing == 1  # The one without results
+        assert stats.studies_with_results == 1
+        
+        # Verify store was called for the valid study
+        mock_store.save_study.assert_called_once()
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

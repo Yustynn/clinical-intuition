@@ -7,7 +7,7 @@ from pathlib import Path
 
 from utils.config import Config
 from utils.logging import setup_logging, get_logger
-from database.json_store import JSONStore
+from storage.json_store import JSONStore
 from models.core import (
     Study, StudyStatus, Endpoint, DirectionNorm, 
     ResultNorm, SuccessLabel, ConfidenceLevel,
@@ -38,11 +38,11 @@ class TestFullSystemIntegration:
             brief_title="Behavioral Intervention for Depression",
             official_title="A Randomized Controlled Trial of CBT vs Usual Care",
             conditions=["Major Depressive Disorder"],
-            phase="Phase 3",
+            phases=["Phase 3"],
             study_type="Interventional",
             overall_status=StudyStatus.COMPLETED,
             has_results=True,
-            sponsor={"name": "Research University", "class": "Other"},
+            sponsor="Research University",
             countries=["United States"]
         )
         

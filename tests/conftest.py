@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from utils.config import Config, DatabaseConfig, APIConfig, ProcessingConfig
-from database.json_store import JSONStore
+from storage.json_store import JSONStore
 
 
 @pytest.fixture
@@ -66,10 +66,10 @@ def sample_study_data():
         "brief_title": "Test Clinical Trial for Behavioral Intervention",
         "official_title": "A Randomized Controlled Trial of Behavioral Intervention for Test Condition",
         "conditions": ["Depression", "Anxiety"],
-        "phase": "Phase 2",
+        "phases": ["Phase 2"],  # Changed from phase to phases (list)
         "study_type": "Interventional",
         "has_results": True,
-        "sponsor": {"name": "Test University", "class": "Other"},
+        "sponsor": "Test University",  # Simplified sponsor field
         "countries": ["United States", "Canada"]
     }
 

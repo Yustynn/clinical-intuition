@@ -15,7 +15,7 @@ class Study:
     brief_title: str
     official_title: Optional[str] = None
     conditions: List[str] = field(default_factory=list)
-    phase: Optional[str] = None
+    phases: List[str] = field(default_factory=list)  # Changed from phase to phases to match API
     study_type: Optional[str] = None
     overall_status: StudyStatus = StudyStatus.UNKNOWN
     why_stopped: Optional[str] = None
@@ -26,9 +26,13 @@ class Study:
     results_first_posted: Optional[datetime] = None
     last_update_posted: Optional[datetime] = None
     
-    # Metadata
-    sponsor: Dict[str, Any] = field(default_factory=dict)
+    # Metadata - simplified sponsor field
+    sponsor: str = "Unknown Sponsor"
     countries: List[str] = field(default_factory=list)
+    
+    # Interventions and outcomes
+    interventions: List['Intervention'] = field(default_factory=list)
+    primary_outcomes: List['PrimaryOutcome'] = field(default_factory=list)
     
     # Raw data for auditing
     raw_data: Optional[Dict[str, Any]] = None
