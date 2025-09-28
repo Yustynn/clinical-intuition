@@ -42,7 +42,7 @@ class TestFullSystemIntegration:
             study_type="Interventional",
             overall_status=StudyStatus.COMPLETED,
             has_results=True,
-            sponsor="Research University",
+            lead_sponsor_name="Research University",
             countries=["United States"]
         )
         

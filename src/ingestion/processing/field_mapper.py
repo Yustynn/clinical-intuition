@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from datetime import datetime
 from dataclasses import dataclass
 
-from models.core import Study, StudyStatus, Intervention, PrimaryOutcome
+from models.core import Study, StudyStatus, Intervention, PrimaryOutcome, SecondaryOutcome
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -165,6 +165,22 @@ class ClinicalTrialsFieldMapper:
         
         return outcomes
     
+    def extract_secondary_outcomes(self, protocol_section: Dict[str, Any]) -> List[SecondaryOutcome]:
+        """Extract secondary outcome information"""
+        outcomes_module = protocol_section.get('outcomesModule', {})
+        secondary_outcomes_data = outcomes_module.get('secondaryOutcomes', [])
+        
+        outcomes = []
+        for i, outcome_data in enumerate(secondary_outcomes_data):
+            outcome = SecondaryOutcome(
+                measure=outcome_data.get('measure', f'Secondary Outcome {i+1}'),
+                time_frame=outcome_data.get('timeFrame', 'Not specified'),
+                description=outcome_data.get('description', '')
+            )
+            outcomes.append(outcome)
+        
+        return outcomes
+    
     def map_to_study_object(self, raw_data: RawStudyData) -> Study:
         """Map raw study data to Study dataclass"""
         protocol = raw_data.protocol_section
@@ -174,44 +190,175 @@ class ClinicalTrialsFieldMapper:
         brief_title = identification.get('briefTitle', '')
         official_title = identification.get('officialTitle', '')
         
+        # Organization study ID and secondary IDs (may not be available)
+        org_study_id_info = identification.get('orgStudyIdInfo', {})
+        organization_study_id = org_study_id_info.get('id', '') if org_study_id_info else ''
+        
+        secondary_id_infos = identification.get('secondaryIdInfos', [])
+        secondary_ids = [id_info.get('id', '') for id_info in secondary_id_infos if id_info.get('id')] if secondary_id_infos else []
+        
+        # Descriptions
+        description_module = protocol.get('descriptionModule', {})
+        brief_summary = description_module.get('briefSummary', '')
+        detailed_description = description_module.get('detailedDescription', '')
+        
         # Status and dates
         status_module = protocol.get('statusModule', {})
         overall_status = self.map_study_status(status_module.get('overallStatus'))
+        why_stopped = status_module.get('whyStopped', '')
         
+        # Parse available date fields (some may not be in API response)
+        study_first_submitted = self.parse_date(status_module.get('studyFirstSubmitDate'))
         first_posted = self.parse_date(status_module.get('studyFirstPostDate'))
+        results_first_submitted = self.parse_date(status_module.get('resultsFirstSubmitDate'))
         results_first_posted = self.parse_date(status_module.get('resultsFirstPostDate'))
         last_update_posted = self.parse_date(status_module.get('lastUpdatePostDate'))
+        study_start_date = self.parse_date(status_module.get('studyStartDate'))
+        primary_completion_date = self.parse_date(status_module.get('primaryCompletionDate'))
+        completion_date = self.parse_date(status_module.get('completionDate'))
+        
+        # Sponsor and collaborators (some fields may not be available)
+        sponsor_module = protocol.get('sponsorCollaboratorsModule', {})
+        lead_sponsor = sponsor_module.get('leadSponsor', {})
+        lead_sponsor_name = lead_sponsor.get('name', 'Unknown Sponsor') if lead_sponsor else 'Unknown Sponsor'
+        lead_sponsor_class = lead_sponsor.get('class', '') if lead_sponsor else ''
+        
+        collaborators_data = sponsor_module.get('collaborators', [])
+        collaborators = [collab.get('name', '') for collab in collaborators_data if collab.get('name')] if collaborators_data else []
+        
+        responsible_party = sponsor_module.get('responsibleParty', {})
+        responsible_party_type = responsible_party.get('type', '') if responsible_party else ''
+        responsible_party_investigator = responsible_party.get('investigatorFullName', '') if responsible_party else ''
+        
+        # Design details (some fields may not be available)
+        design_module = protocol.get('designModule', {})
+        study_type = design_module.get('studyType', 'Unknown')
+        phases = design_module.get('phases', [])
+        
+        design_info = design_module.get('designInfo', {})
+        allocation = design_info.get('allocation', '') if design_info else ''
+        intervention_model = design_info.get('interventionModel', '') if design_info else ''
+        intervention_model_description = design_info.get('interventionModelDescription', '') if design_info else ''
+        primary_purpose = design_info.get('primaryPurpose', '') if design_info else ''
+        
+        masking_info = design_info.get('maskingInfo', {}) if design_info else {}
+        masking = masking_info.get('masking', '') if masking_info else ''
+        masking_description = masking_info.get('maskingDescription', '') if masking_info else ''
+        
+        enrollment_info = design_module.get('enrollmentInfo', {})
+        enrollment_count = self._safe_int(enrollment_info.get('count')) if enrollment_info else None
+        enrollment_type = enrollment_info.get('type', '') if enrollment_info else ''
+        
+        target_duration = design_module.get('targetDuration', '')
         
         # Conditions
         conditions_module = protocol.get('conditionsModule', {})
         conditions = conditions_module.get('conditions', [])
         
-        # Design
-        design_module = protocol.get('designModule', {})
-        study_type = design_module.get('studyType', 'Unknown')
-        phases = design_module.get('phases', [])
+        # Eligibility (may not be available)
+        eligibility_module = protocol.get('eligibilityModule', {})
+        minimum_age = eligibility_module.get('minimumAge', '') if eligibility_module else ''
+        maximum_age = eligibility_module.get('maximumAge', '') if eligibility_module else ''
+        sex = eligibility_module.get('sex', '') if eligibility_module else ''
+        accepts_healthy_volunteers = eligibility_module.get('healthyVolunteers') if eligibility_module else None
+        if accepts_healthy_volunteers == 'Accepts Healthy Volunteers':
+            accepts_healthy_volunteers = True
+        elif accepts_healthy_volunteers == 'No':
+            accepts_healthy_volunteers = False
+        else:
+            accepts_healthy_volunteers = None
+        eligibility_criteria = eligibility_module.get('eligibilityCriteria', '') if eligibility_module else ''
         
-        # Sponsor
-        sponsor_module = protocol.get('sponsorCollaboratorsModule', {})
-        lead_sponsor = sponsor_module.get('leadSponsor', {})
-        sponsor_name = lead_sponsor.get('name', 'Unknown Sponsor')
+        # Locations (may not be available)
+        contacts_locations_module = protocol.get('contactsLocationsModule', {})
+        locations_data = contacts_locations_module.get('locations', []) if contacts_locations_module else []
+        
+        # Extract countries and locations
+        countries = set()
+        locations = []
+        for location in locations_data:
+            if location.get('country'):
+                countries.add(location['country'])
+            
+            city = location.get('city', '')
+            state = location.get('state', '')
+            if city and state:
+                locations.append(f"{city}, {state}")
+            elif city:
+                locations.append(city)
+        
+        # Oversight (may not be available)
+        oversight_module = protocol.get('oversightModule', {})
+        oversight_has_dmc = oversight_module.get('oversightHasDmc') if oversight_module else None
+        is_fda_regulated_drug = oversight_module.get('isFdaRegulatedDrug') if oversight_module else None
+        is_fda_regulated_device = oversight_module.get('isFdaRegulatedDevice') if oversight_module else None
         
         # Create the Study object
         study = Study(
             nct_id=raw_data.nct_id,
             brief_title=brief_title,
             official_title=official_title,
-            overall_status=overall_status,
-            study_type=study_type,
-            phases=phases,
+            brief_summary=brief_summary,
+            detailed_description=detailed_description,
             conditions=conditions,
-            sponsor=sponsor_name,
+            phases=phases,
+            study_type=study_type,
+            primary_purpose=primary_purpose,
+            overall_status=overall_status,
+            why_stopped=why_stopped,
+            has_results=raw_data.has_results,
+            
+            # Dates
             first_posted=first_posted,
             results_first_posted=results_first_posted,
             last_update_posted=last_update_posted,
-            has_results=raw_data.has_results,
+            study_first_submitted=study_first_submitted,
+            study_start_date=study_start_date,
+            primary_completion_date=primary_completion_date,
+            completion_date=completion_date,
+            results_first_submitted=results_first_submitted,
+            
+            # Sponsor information
+            lead_sponsor_name=lead_sponsor_name,
+            lead_sponsor_class=lead_sponsor_class,
+            collaborators=collaborators,
+            responsible_party_type=responsible_party_type,
+            responsible_party_investigator=responsible_party_investigator,
+            
+            # Design details
+            allocation=allocation,
+            intervention_model=intervention_model,
+            intervention_model_description=intervention_model_description,
+            masking=masking,
+            masking_description=masking_description,
+            
+            # Enrollment
+            enrollment_count=enrollment_count,
+            enrollment_type=enrollment_type,
+            target_duration=target_duration,
+            
+            # Geographic
+            countries=list(countries),
+            locations=locations,
+            
+            # Eligibility
+            minimum_age=minimum_age,
+            maximum_age=maximum_age,
+            sex=sex,
+            accepts_healthy_volunteers=accepts_healthy_volunteers,
+            eligibility_criteria=eligibility_criteria,
+            
+            # Additional metadata
+            organization_study_id=organization_study_id,
+            secondary_ids=secondary_ids,
+            oversight_has_dmc=oversight_has_dmc,
+            is_fda_regulated_drug=is_fda_regulated_drug,
+            is_fda_regulated_device=is_fda_regulated_device,
+            
+            # Interventions and outcomes
             interventions=self.extract_interventions(protocol),
-            primary_outcomes=self.extract_primary_outcomes(protocol)
+            primary_outcomes=self.extract_primary_outcomes(protocol),
+            secondary_outcomes=self.extract_secondary_outcomes(protocol)
         )
         
         return study

@@ -69,7 +69,7 @@ def sample_study_data():
         "phases": ["Phase 2"],  # Changed from phase to phases (list)
         "study_type": "Interventional",
         "has_results": True,
-        "sponsor": "Test University",  # Simplified sponsor field
+        "lead_sponsor_name": "Test University",  # Updated to new field name
         "countries": ["United States", "Canada"]
     }
 

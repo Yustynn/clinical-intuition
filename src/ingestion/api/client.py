@@ -34,25 +34,54 @@ class ClinicalTrialsAPIClient:
         "protocolSection.identificationModule.nctId",
         "protocolSection.identificationModule.briefTitle",
         "protocolSection.identificationModule.officialTitle",
+        "protocolSection.identificationModule.orgStudyIdInfo",
+        "protocolSection.identificationModule.secondaryIdInfos",
+        "protocolSection.identificationModule.organization",
         
-        # Status
+        # Descriptions
+        "protocolSection.descriptionModule.briefSummary",
+        "protocolSection.descriptionModule.detailedDescription",
+        
+        # Status and dates
         "protocolSection.statusModule.overallStatus",
         "protocolSection.statusModule.whyStopped",
+        "protocolSection.statusModule.studyFirstSubmitDate",
+        "protocolSection.statusModule.studyFirstPostDate",
+        "protocolSection.statusModule.resultsFirstSubmitDate",
+        "protocolSection.statusModule.resultsFirstPostDate",
+        "protocolSection.statusModule.lastUpdateSubmitDate",
+        "protocolSection.statusModule.lastUpdatePostDate",
+        "protocolSection.statusModule.studyStartDate",
+        "protocolSection.statusModule.primaryCompletionDate",
+        "protocolSection.statusModule.completionDate",
         
-        # Design
+        # Sponsor and collaborators
+        "protocolSection.sponsorCollaboratorsModule.leadSponsor",
+        "protocolSection.sponsorCollaboratorsModule.collaborators",
+        "protocolSection.sponsorCollaboratorsModule.responsibleParty",
+        
+        # Design details
         "protocolSection.designModule.studyType",
         "protocolSection.designModule.phases",
-        "protocolSection.designModule.designInfo",
+        "protocolSection.designModule.designInfo.allocation",
+        "protocolSection.designModule.designInfo.interventionModel",
+        "protocolSection.designModule.designInfo.interventionModelDescription",
+        "protocolSection.designModule.designInfo.primaryPurpose",
+        "protocolSection.designModule.designInfo.maskingInfo",
+        "protocolSection.designModule.enrollmentInfo",
+        "protocolSection.designModule.targetDuration",
         
         # Conditions
         "protocolSection.conditionsModule.conditions",
+        "protocolSection.conditionsModule.keywords",
         
-        # Population
+        # Eligibility
         "protocolSection.eligibilityModule.sex",
         "protocolSection.eligibilityModule.minimumAge", 
         "protocolSection.eligibilityModule.maximumAge",
         "protocolSection.eligibilityModule.healthyVolunteers",
         "protocolSection.eligibilityModule.eligibilityCriteria",
+        "protocolSection.eligibilityModule.stdAges",
         
         # Interventions & arms
         "protocolSection.armsInterventionsModule.armGroups",
@@ -61,6 +90,16 @@ class ClinicalTrialsAPIClient:
         # Outcomes
         "protocolSection.outcomesModule.primaryOutcomes",
         "protocolSection.outcomesModule.secondaryOutcomes",
+        "protocolSection.outcomesModule.otherOutcomes",
+        
+        # Locations
+        "protocolSection.contactsLocationsModule.locations",
+        "protocolSection.contactsLocationsModule.overallOfficials",
+        
+        # Oversight
+        "protocolSection.oversightModule.oversightHasDmc",
+        "protocolSection.oversightModule.isFdaRegulatedDrug",
+        "protocolSection.oversightModule.isFdaRegulatedDevice",
         
         # Results data
         "resultsSection.participantFlowModule",
@@ -71,19 +110,27 @@ class ClinicalTrialsAPIClient:
         "hasResults"
     ]
     
-    # Minimal fields for filtering and testing
+    # Minimal fields to stay within URL limits - exactly as they were working before
     CORE_FIELDS = [
         "protocolSection.identificationModule.nctId",
         "protocolSection.identificationModule.briefTitle",
-        "protocolSection.statusModule.overallStatus",
+        "protocolSection.identificationModule.officialTitle",
+        "protocolSection.statusModule.overallStatus", 
+        "protocolSection.statusModule.whyStopped",
         "protocolSection.designModule.studyType",
+        "protocolSection.designModule.phases",
+        "protocolSection.conditionsModule.conditions",
+        "protocolSection.eligibilityModule.sex",
+        "protocolSection.eligibilityModule.minimumAge",
+        "protocolSection.eligibilityModule.maximumAge", 
+        "protocolSection.eligibilityModule.healthyVolunteers",
         "protocolSection.armsInterventionsModule.interventions",
         "protocolSection.outcomesModule.primaryOutcomes",
         "hasResults"
     ]
     
-    # Default to comprehensive fields for production fetching
-    REQUIRED_FIELDS = COMPREHENSIVE_FIELDS
+    # Default to core fields to avoid URL length limits
+    REQUIRED_FIELDS = CORE_FIELDS
     
     def __init__(self, config: Optional[APIConfig] = None):
         self.config = config or APIConfig()

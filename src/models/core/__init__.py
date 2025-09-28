@@ -15,6 +15,7 @@ from .study import (
     Study,
     Intervention,
     PrimaryOutcome,
+    SecondaryOutcome,
 )
 
 # Import endpoint models
@@ -45,6 +46,7 @@ __all__ = [
     "Study",
     "Intervention",
     "PrimaryOutcome",
+    "SecondaryOutcome",
     # Endpoint models
     "Endpoint",
     # Result models
