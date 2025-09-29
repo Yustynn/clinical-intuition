@@ -5,7 +5,6 @@ import { Button, Sheet, Toast } from '../../components/ui';
 import { GradientFlash, ScorePop, EmojiBurst, ParticleTrail } from '../../components/ui/Effects';
 import QuestionStyles from '../../components/ui/QuestionStyles';
 import { useCardDemo } from '../../hooks/useCardDemo';
-import { DEMO_DECK } from '../../constants';
 import type { Theme } from '../../utils/theme';
 
 interface PredictionCardProps {
