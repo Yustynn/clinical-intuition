@@ -224,6 +224,12 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
           <div className="font-medium">Study Title</div>
           <div className="opacity-80">{sample.study.title}</div>
         </div>
+        {sample.study.brief_description && (
+          <div>
+            <div className="font-medium">Study Description</div>
+            <div className="opacity-80 text-sm leading-relaxed">{sample.study.brief_description}</div>
+          </div>
+        )}
         <div>
           <div className="font-medium">Participants</div>
           <div className="opacity-80">{sample.front_details.intervention_group_fragment} (n={sample.num_participants})</div>
@@ -245,6 +251,12 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
           <div className="font-medium">Conditions</div>
           <div className="opacity-80">{sample.conditions.join(', ')}</div>
         </div>
+        {sample.keywords && sample.keywords.length > 0 && (
+          <div>
+            <div className="font-medium">Keywords</div>
+            <div className="opacity-80">{sample.keywords.join(', ')}</div>
+          </div>
+        )}
         <div className="pt-2 text-xs opacity-70">
           Source:{' '}
           <a className="underline" href={`https://clinicaltrials.gov/study/${sample.study.nct_id}`} target="_blank" rel="noopener noreferrer">
