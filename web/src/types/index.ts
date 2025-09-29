@@ -2,6 +2,7 @@ export interface PredictionCard {
   study: {
     nct_id: string;
     title: string;
+    brief_description?: string;
   };
   card_id: string;
   front_details: {
