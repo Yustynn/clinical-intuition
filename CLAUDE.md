@@ -4,148 +4,185 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a clinical trial prediction market project that generates binary yes/no prediction questions from real clinical trial outcomes. The project ingests completed trials with results from ClinicalTrials.gov v2 API, normalizes endpoints, and precomputes binary ground truth labels per card ("Success/Fail/Unclear").
+Clinical Intuition is a web-based prediction market game where users make binary yes/no predictions on real clinical trial outcomes. The project transforms complex clinical trial data into engaging, educational prediction cards that test users' intuition about medical research outcomes.
 
-### Current Phase: Data gathering & preprocessing (Phase 1)
+**Live Demo:** https://yustynn.github.io/clinical-intuition/
 
-The project is currently implementing:
-- Pulling completed studies with results from CT.gov v2 API
-- Selecting clear primary endpoints per card (intervention → outcome → timeframe → population)
-- Normalizing timeframes, units, and directionality (improve/reduce/increase)
-- Computing binary labels (Yes/No/Unclear) with rationale snippets
-- Writing to a minimal database structure (studies, endpoints, results_norm, cards)
+### Current Status: Phase 2 - Live Web Application ✅
 
-### Phase 2 Goals (Future)
-- Web app with card feed (yes/no, instant feedback), streaks, shares
-- Shared mini-stacks (3–5 cards), anon play → soft signup
-- Admin curation: retire/merge/spot-audit
+The project has completed data processing and now features a fully functional React web application with:
+- **Prediction Card Game**: Interactive cards with clinical trial questions
+- **Real-time Feedback**: Immediate results showing actual study outcomes  
+- **Privacy-First Design**: Hides p-values and results until after user predictions
+- **Modern UI**: Light/dark theme toggle, animations, haptic feedback
+- **Deployed**: Live on GitHub Pages with automated CI/CD
 
 ## Architecture Overview
 
-### Data Pipeline Architecture
-The project follows a multi-stage data processing pipeline:
+### Frontend Web Application (`/web/`)
+**Tech Stack:**
+- **Framework**: React 19 + TypeScript
+- **Build Tool**: Vite with HMR
+- **Styling**: TailwindCSS with custom theme system
+- **Animations**: Framer Motion for smooth UI transitions
+- **Icons**: Lucide React
+- **State Management**: Zustand (configured but minimal usage)
+- **Routing**: React Router v7 (configured for future expansion)
 
-1. **Ingestor** - Fetches studies from ClinicalTrials.gov API with filters
-2. **Endpoint Normalizer** - Normalizes timeframes and determines direction
-3. **Results Aligner** - Maps outcome values & analyses, computes success labels
-4. **Card Builder** - Generates clear question text using LLM for rewriting
-5. **QC Sampler** - Manual review sampling for quality assurance
+**Key Components:**
+- `PredictionCard.tsx`: Main game interface with question display and answer buttons
+- `Landing.tsx`: Home page with game introduction
+- `ModeToggle.tsx`: Light/dark theme switcher
+- `Effects.tsx`: Visual effects (particles, score pops, gradient flashes)
 
-### Current Implementation Status
-The project currently has a Jupyter notebook (`old/Play_Clean.ipynb`) that demonstrates the data fetching and analysis pipeline. This contains:
+### Data Processing Pipeline (`/retrieve-data/`)
+**Completed Data Pipeline:**
+1. **Raw Data Ingestion**: 5000+ clinical trials from ClinicalTrials.gov v2 API
+2. **Study Validation**: Filters for completed trials with results and p-values  
+3. **LLM Processing**: OpenAI GPT-4 converts clinical outcomes to layperson questions
+4. **Card Generation**: 448 validated prediction cards with success labels
+5. **Output**: JSON card data consumed by web application
 
-- API functions to fetch behavioral intervention studies from ClinicalTrials.gov
-- Success assessment logic for determining intervention outcomes
-- Statistical analysis methods for results with proper p-values and confidence intervals
-- Question generation for prediction market cards
-- CSV export functionality
+**Key Notebooks:**
+- `2025-09-29 Download Raw Studies.ipynb`: API data retrieval
+- `2025-09-29 Explore.ipynb`: Data exploration and analysis
+- `2025-09-30 ChatGPT and Final Card Creation.ipynb`: LLM-powered card generation
 
-### Data Model Structure
+### Card Data Structure
 
+Each prediction card contains:
+```typescript
+interface PredictionCard {
+  study: {
+    nct_id: string;           // ClinicalTrials.gov identifier
+    title: string;            // Study title
+    brief_description: string;
+  };
+  card_id: string;           // Unique card identifier
+  front_details: {
+    question: string;        // LLM-generated layperson question
+    intervention_fragment: string;
+    intervention_group_fragment: string;
+    outcome_fragment: string;
+    comparator_group_fragment: string;
+    timeframe_fragment: string;
+  };
+  p_value: string;          // Statistical significance (hidden until answered)
+  num_participants: number;
+  success: boolean;         // True if p < 0.05
+  conditions: string[];     // Medical conditions studied
+  keywords: string[];       // Study keywords
+}
 ```
-studies:
-- nct_id (pk), brief_title, official_title
-- conditions (jsonb), phase, study_type
-- first_posted, results_first_posted, last_update_posted
-- sponsor (jsonb), status, countries (jsonb)
-- raw (jsonb) - original doc for auditing
-
-endpoints:
-- id (pk), nct_id (fk), is_primary (bool)
-- measure, timeframe, units, population_text
-- intervention_names (jsonb), comparator_name
-- direction_norm ENUM('improve','reduce','increase','non-inferior')
-
-results_norm:
-- endpoint_id (fk), param_type, param_value, p_value
-- ci_low, ci_high, analysis_population
-- success_label ENUM('Yes','No','Unclear')
-- rationale_snippet, source_paths (jsonb)
-
-cards:
-- id (pk), endpoint_id (fk), question_text
-- answer ENUM('Y','N'), why_snippet
-- difficulty (float), flags (jsonb)
-```
-
-### Success Assessment Logic
-
-The system uses a comprehensive two-tier approach:
-1. **Statistical Analysis** (preferred): Analyzes actual results data with p-values, effect sizes, and confidence intervals
-2. **Status-based Assessment** (fallback): Uses study completion status and termination reasons
-
-Success determination follows these rules:
-- Primary, prespecified timepoint only
-- Between-group inference (avoid within-group pre–post)
-- p < 0.05 unless non-inferiority specified
-- If multiple primary outcomes/timepoints, choose one with clear clinical meaning
-- Mismatched timeframes → Unclear
 
 ## Development Commands
 
-This is a Jupyter notebook-based project. To work with the existing analysis:
-
-### Running the Analysis
+### Web Application Development
 ```bash
-jupyter notebook old/Play_Clean.ipynb
+# Start development server
+cd web && npm run dev
+
+# Build for production  
+cd web && npm run build
+
+# Preview production build
+cd web && npm run preview
+
+# Lint code
+cd web && npm run lint
 ```
 
-### Python Dependencies
-The notebook uses standard Python libraries:
-- urllib.request and urllib.parse for API calls
-- json for data parsing
-- csv for export functionality
-- typing for type hints
-- collections.Counter for data analysis
+### Data Processing
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
 
-No package manager configuration files exist yet - dependencies are imported directly in the notebook.
+# Run Jupyter notebooks
+jupyter notebook retrieve-data/notebooks/
+```
 
-## API Integration
+## Key Features & Implementation Details
+
+### Privacy-First Design
+- **P-value Hiding**: Statistical results hidden until after user makes prediction
+- **Delayed Reveal**: Results show with 500ms delay after answering for better UX
+- **Details Panel**: Shows study info but hides statistical measures until answered
+
+### Theme System
+- **Light Theme Default**: App initializes in light mode (user preference stored)
+- **Retro Styling**: Custom theme system with amber color palette
+- **CRT Effects**: Scanlines and phosphor glow for retro computer aesthetic
+
+### Game Mechanics
+- **Binary Predictions**: Users choose Yes/No for intervention success
+- **Instant Feedback**: Shows correct/incorrect with visual effects
+- **Streak Tracking**: Maintains user streak with visual indicators
+- **Haptic Feedback**: Vibration patterns for mobile users (success/failure)
+
+### Deployment & CI/CD
+- **GitHub Pages**: Automated deployment via GitHub Actions
+- **Build Pipeline**: TypeScript compilation → Vite build → Pages deploy
+- **Base Path**: Configured for `/clinical-intuition/` subdirectory
+- **No Jekyll**: `.nojekyll` file disables Jekyll processing
+
+## Card Quality Standards
+
+The LLM processing ensures cards meet quality criteria:
+- **Readability**: Questions use layperson language, avoid medical jargon
+- **Structure**: Consistent format "Did [intervention] improve [outcome] in [population] compared to [control] after [timeframe]?"
+- **Accuracy**: Statistical significance correctly mapped (p < 0.05 = success)
+- **Validation**: Pydantic models ensure question format consistency
+
+## Future Enhancement Opportunities
+
+**User Experience:**
+- User accounts with persistent streak tracking
+- Card difficulty ratings and adaptive selection
+- Social features (sharing predictions, leaderboards)
+- More card categories (pharmaceutical, device trials)
+
+**Analytics & Learning:**
+- User prediction accuracy tracking
+- A/B testing for card presentation
+- Analytics integration (Google Analytics planned)
+
+**Content:**
+- Expand beyond behavioral interventions
+- Multi-language support for questions
+- Expert commentary on surprising results
+
+## Technical Debt & Maintenance
+
+**Current Issues:**
+- Large bundle size (1MB+ JS) - needs code splitting
+- No backend API - all data static JSON
+- Limited error handling for malformed card data
+- No user authentication system
+
+**Monitoring:**
+- GitHub Actions for automated deployment
+- No runtime monitoring or error tracking yet
+- Performance monitoring needed for card loading
+
+## API Integration Notes
 
 ### ClinicalTrials.gov v2 API
-- Base URL: `https://clinicaltrials.gov/api/v2/studies`
-- Filters: `hasResults = true`, `overallStatus in [COMPLETED, TERMINATED, SUSPENDED]`
-- Query: `AREA[InterventionType]BEHAVIORAL` for behavioral interventions
-- Pagination: Uses API tokens for incremental crawling
+- **Endpoint**: `https://clinicaltrials.gov/api/v2/studies`
+- **Filters Used**: `hasResults=true`, completed studies only
+- **Rate Limits**: Handled with concurrent processing (100 workers)
+- **Data Quality**: 34.7% of studies had usable p-values
 
-### Key Fields Extracted
-**Protocol fields:**
-- identificationModule: nctId, briefTitle/officialTitle
-- conditionsModule: conditions[]
-- armsInterventionsModule: arms[], interventions[]
-- outcomesModule.primaryOutcomes[]
-- eligibilityModule: sex, minimumAge, maximumAge
+### OpenAI Integration (Data Processing Only)
+- **Model**: GPT-4-mini for cost efficiency  
+- **Usage**: $1.34 for 448 cards (640k input, 588k output tokens)
+- **Validation**: Pydantic models ensure response format consistency
+- **Error Rate**: ~10% failure rate due to format validation
 
-**Results fields:**
-- resultsSection.outcomeMeasures[] with values per resultGroupCode
-- resultsSection.outcomeAnalyses[]: paramType, paramValue, pValue, CI bounds
-- resultsSection.resultGroups[] for arm mapping
+## Security & Privacy
 
-## LLM Integration Points
+- **No User Tracking**: No cookies or personal data collection
+- **Static Deployment**: No server-side vulnerabilities
+- **HTTPS Only**: Served over secure connection via GitHub Pages
+- **Content Security**: All clinical data from public ClinicalTrials.gov
 
-The system uses LLM for offline preprocessing only (no runtime calls):
-
-1. **Card Question Rewriting** - Convert clinical outcomes to layperson yes/no questions
-2. **Ambiguity Checks** - Flag unclear measures, missing timeframes
-3. **Direction Mapping** - Confirm direction_norm mapping (improve/reduce/increase)
-
-Prompt templates to implement:
-- `rewrite_card_prompt.txt`
-- `direction_mapping_prompt.txt` 
-- `ambiguity_check_prompt.txt`
-
-## Quality Gates
-
-Automated checks for generated cards:
-- Readability: Flesch–Kincaid ≤ 10th grade
-- Structure: Single intervention, outcome, timeframe, population phrase
-- Deduplication: By nctId + outcome.measure + timeframe
-- Content filtering: Exclude sensitive topics from casual play
-
-## Testing and Validation
-
-Manual QC process:
-- Sample X% of cards for human review
-- Admin UI shows: question, why_snippet, stats, JSON pointers
-- Actions: approve/retire/edit
-- Track disagreement rate: human spot-check vs pipeline label
+This project demonstrates the successful transformation of complex medical research data into an engaging, educational web experience that respects user privacy while providing valuable insights into clinical trial outcomes.
