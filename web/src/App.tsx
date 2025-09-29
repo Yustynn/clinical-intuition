@@ -4,7 +4,7 @@ import Landing from './components/layout/Landing';
 import type { ThemeMode } from './utils/theme';
 
 function App() {
-  const [mode, setMode] = useState<ThemeMode>('dark');
+  const [mode, setMode] = useState<ThemeMode>('light');
   const theme = useMemo(() => getTheme(mode), [mode]);
 
   return (

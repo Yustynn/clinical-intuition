@@ -221,7 +221,12 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
         </div>
         <div>
           <div className="font-medium">Statistical measure</div>
-          <div className="opacity-80">p-value = {sample.p_value}, n={sample.num_participants}</div>
+          <div className="opacity-80">
+            {state.phase === 'reveal' 
+              ? `p-value = ${sample.p_value}, n=${sample.num_participants}`
+              : `n=${sample.num_participants} (statistical results shown after answering)`
+            }
+          </div>
         </div>
         <div>
           <div className="font-medium">Conditions</div>
