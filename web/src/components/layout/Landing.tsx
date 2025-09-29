@@ -16,9 +16,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange }) => {
 
   const onPlayed = () => {
     playsRef.current += 1;
-    if (playsRef.current === 3) {
-      setAuthOpen(true);
-    }
+    // TODO: Re-enable signup modal after auth system is ready
+    // if (playsRef.current === 3) {
+    //   setAuthOpen(true);
+    // }
   };
 
   return (

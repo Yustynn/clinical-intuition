@@ -259,14 +259,19 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
         title="Challenge a friend"
         theme={theme}
       >
-        <div className="grid gap-3">
-          <Button onClick={() => share('card')} theme={theme} className="w-full justify-start">
+        {/* Under Construction Banner */}
+        <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded text-amber-800 text-sm">
+          🚧 <strong>Under Construction</strong> - Sharing features coming soon!
+        </div>
+        
+        <div className="grid gap-3 opacity-50">
+          <Button onClick={() => share('card')} theme={theme} className="w-full justify-start" disabled>
             Share **this card**
           </Button>
-          <Button onClick={() => share('stack')} variant="secondary" theme={theme} className="w-full justify-start">
+          <Button onClick={() => share('stack')} variant="secondary" theme={theme} className="w-full justify-start" disabled>
             Share a **3-card stack**
           </Button>
-          <Button onClick={() => share('image')} variant="secondary" theme={theme} className="w-full justify-start">
+          <Button onClick={() => share('image')} variant="secondary" theme={theme} className="w-full justify-start" disabled>
             Share as **image**
           </Button>
         </div>
@@ -278,35 +283,41 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
         title="Report an issue"
         theme={theme}
       >
+        {/* Under Construction Banner */}
+        <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded text-amber-800 text-sm">
+          🚧 <strong>Under Construction</strong> - Issue reporting system coming soon!
+        </div>
+        
         <form
           onSubmit={(e) => {
             e.preventDefault();
             setState((s) => ({ ...s, openReport: false, toast: "Thanks — we'll review." }));
             setTimeout(() => setState((s) => ({ ...s, toast: '' })), 1400);
           }}
-          className="grid gap-3"
+          className="grid gap-3 opacity-50"
         >
           <fieldset className="grid gap-2 text-sm">
             <label className="inline-flex items-center gap-2">
-              <input type="radio" name="reason" defaultChecked /> Answer seems wrong
+              <input type="radio" name="reason" defaultChecked disabled /> Answer seems wrong
             </label>
             <label className="inline-flex items-center gap-2">
-              <input type="radio" name="reason" /> Unclear question
+              <input type="radio" name="reason" disabled /> Unclear question
             </label>
             <label className="inline-flex items-center gap-2">
-              <input type="radio" name="reason" /> Formatting issue
+              <input type="radio" name="reason" disabled /> Formatting issue
             </label>
             <label className="inline-flex items-center gap-2">
-              <input type="radio" name="reason" /> Sensitive topic
+              <input type="radio" name="reason" disabled /> Sensitive topic
             </label>
           </fieldset>
           <textarea
             placeholder="What looks off? (e.g., wrong timepoint)"
             className={`w-full min-h-[96px] ${theme.btnRadius} border border-amber-300 p-3`}
+            disabled
           />
           <div className="flex items-center justify-between">
             <div className="text-xs opacity-70">Auto-attaches card ID {sample.card_id}</div>
-            <Button type="submit" theme={theme}>
+            <Button type="submit" theme={theme} disabled>
               Submit
             </Button>
           </div>
