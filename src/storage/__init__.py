@@ -1,1 +1,0 @@
-"""Storage abstraction layer for clinical trial data."""
