@@ -26,7 +26,7 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange }) => {
       <header className="w-full max-w-[420px] flex items-start justify-between">
         <div>
           <h1 className={`text-2xl md:text-3xl font-semibold ${theme.font}`}>
-            How sharp is your science intuition?
+            How sharp is your clinical intuition?
           </h1>
           <p className={`opacity-70 mt-1 ${theme.font}`}>
             Real results. Real trials. Guess yes/no — build intuition fast.
