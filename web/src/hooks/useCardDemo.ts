@@ -23,6 +23,9 @@ interface CardDemoState {
   pop: boolean;
   celebrate: boolean;
   trail: ParticlePoint[];
+  totalCorrect: number;
+  totalWrong: number;
+  cardsPlayed: number;
 }
 
 export function useCardDemo() {
@@ -40,6 +43,9 @@ export function useCardDemo() {
     pop: false,
     celebrate: false,
     trail: [],
+    totalCorrect: 0,
+    totalWrong: 0,
+    cardsPlayed: 0,
   });
 
   const sample: PredictionCard = DEMO_DECK[state.idx];
@@ -59,6 +65,9 @@ export function useCardDemo() {
       streak: isCorrect ? s.streak + 1 : 0,
       pop: isCorrect,
       celebrate: isCorrect,
+      totalCorrect: isCorrect ? s.totalCorrect + 1 : s.totalCorrect,
+      totalWrong: !isCorrect ? s.totalWrong + 1 : s.totalWrong,
+      cardsPlayed: s.cardsPlayed + 1,
     }));
     
     haptics(isCorrect ? 30 : [40, 60, 40]);

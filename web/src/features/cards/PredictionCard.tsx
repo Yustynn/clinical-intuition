@@ -66,10 +66,24 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
 
         {/* Header */}
         <div className="flex items-center justify-between text-xs opacity-70">
-          <div className="inline-flex items-center gap-1">
-            PLAY {streakHot && <Flame className={`h-4 w-4 ${theme.accent}`} />}
+          <div className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-1">
+              PLAY {streakHot && <Flame className={`h-4 w-4 ${theme.accent}`} />}
+            </span>
+            {state.cardsPlayed > 0 && (
+              <div className="inline-flex items-center gap-3">
+                <span className="inline-flex items-center gap-1">
+                  <Check className="h-3 w-3 text-green-500" />
+                  {state.totalCorrect}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <X className="h-3 w-3 text-red-500" />
+                  {state.totalWrong}
+                </span>
+              </div>
+            )}
           </div>
-          <div>{state.idx + 1}/{DEMO_DECK.length}</div>
+          <div>{state.cardsPlayed} played</div>
         </div>
 
         {/* Question */}
