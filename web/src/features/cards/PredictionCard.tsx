@@ -5,6 +5,7 @@ import { Button, Sheet, Toast } from '../../components/ui';
 import { GradientFlash, ScorePop, EmojiBurst, ParticleTrail } from '../../components/ui/Effects';
 import QuestionStyles from '../../components/ui/QuestionStyles';
 import { useCardDemo } from '../../hooks/useCardDemo';
+import { DEMO_DECK } from '../../constants';
 import type { Theme } from '../../utils/theme';
 
 interface PredictionCardProps {
@@ -68,20 +69,22 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
           <div className="inline-flex items-center gap-1">
             PLAY {streakHot && <Flame className={`h-4 w-4 ${theme.accent}`} />}
           </div>
-          <div>{state.idx + 1}/3</div>
+          <div>{state.idx + 1}/{DEMO_DECK.length}</div>
         </div>
 
         {/* Question */}
         <div className="mt-3">
           <h1 className={`text-xl font-semibold leading-snug ${theme.question}`}>
-            {sample.question}
+            {sample.front_details.intervention_fragment}
           </h1>
-          <div className="mt-1 text-sm opacity-70">{sample.context}</div>
-          {sample.parts && <QuestionStyles theme={theme} parts={sample.parts} />}
+          <div className="mt-1 text-sm opacity-70">
+            {sample.conditions.join(' • ')} • {sample.num_participants} participants
+          </div>
+          {sample.front_details && <QuestionStyles theme={theme} fragments={sample.front_details} />}
         </div>
 
         {/* Particle trail container */}
-        <div className="relative">
+        <div className="relative pointer-events-none">
           <ParticleTrail points={state.trail} />
         </div>
 
@@ -103,12 +106,22 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="mt-5 space-y-3"
+            className="mt-5 space-y-3 relative z-10"
           >
             <motion.div
               initial={state.correct ? { scale: 0.9, opacity: 0 } : { x: 0 }}
-              animate={state.correct ? { scale: 1, opacity: 1 } : { x: [0, -6, 6, -3, 3, 0] }}
-              transition={{ type: 'spring', stiffness: 260, damping: 18, duration: 0.4 }}
+              animate={state.correct ? { scale: 1, opacity: 1 } : { x: 0 }}
+              transition={
+                state.correct 
+                  ? { type: 'spring', stiffness: 260, damping: 18, duration: 0.4 }
+                  : { 
+                      x: {
+                        type: 'keyframes',
+                        values: [0, -6, 6, -3, 3, 0],
+                        duration: 0.4
+                      }
+                    }
+              }
               className={`flex items-center gap-2 text-base font-semibold ${
                 state.correct 
                   ? (theme.key === 'retroDark' ? 'text-amber-300' : 'text-amber-600')
@@ -133,17 +146,19 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
             )}
             
             <div className="text-[15px] opacity-90">
-              {sample.why}{' '}
-              <button
+              The study {sample.success ? 'found' : 'did not find'} a significant effect (p={sample.p_value}).{' '}
+              <a
                 className="inline-flex items-center gap-1 opacity-70 hover:opacity-90 underline underline-offset-2"
-                onClick={() => setState((s) => ({ ...s, openDetails: true }))}
+                href={`https://clinicaltrials.gov/study/${sample.study.nct_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 NCT link <ExternalLink className="h-3 w-3" />
-              </button>
+              </a>
             </div>
             
             <div className="text-sm opacity-70">
-              You beat {sample.others}% (n={sample.n}).
+              {sample.num_participants} participants in this study.
             </div>
             
             <div className="grid grid-cols-2 gap-3 pt-1">
@@ -199,21 +214,29 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
         theme={theme}
       >
         <div>
+          <div className="font-medium">Study Title</div>
+          <div className="opacity-80">{sample.study.title}</div>
+        </div>
+        <div>
           <div className="font-medium">Participants</div>
-          <div className="opacity-80">Adults with post-stroke limitations (n=142).</div>
+          <div className="opacity-80">{sample.front_details.intervention_group_fragment} (n={sample.num_participants})</div>
         </div>
         <div>
           <div className="font-medium">Intervention & Comparator</div>
-          <div className="opacity-80">Treadmill training vs stretching (control).</div>
+          <div className="opacity-80">{sample.front_details.intervention_fragment} vs {sample.front_details.comparator_group_fragment}</div>
         </div>
         <div>
           <div className="font-medium">Statistical measure</div>
-          <div className="opacity-80">Between-group difference at 6 months (p-value/effect size reported).</div>
+          <div className="opacity-80">p-value = {sample.p_value}, n={sample.num_participants}</div>
+        </div>
+        <div>
+          <div className="font-medium">Conditions</div>
+          <div className="opacity-80">{sample.conditions.join(', ')}</div>
         </div>
         <div className="pt-2 text-xs opacity-70">
           Source:{' '}
-          <a className="underline" href="#" onClick={(e) => e.preventDefault()}>
-            {sample.nct}
+          <a className="underline" href={`https://clinicaltrials.gov/study/${sample.study.nct_id}`} target="_blank" rel="noopener noreferrer">
+            {sample.study.nct_id}
           </a>
         </div>
       </Sheet>
@@ -270,7 +293,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
             className={`w-full min-h-[96px] ${theme.btnRadius} border border-amber-300 p-3`}
           />
           <div className="flex items-center justify-between">
-            <div className="text-xs opacity-70">Auto-attaches card ID {sample.id}</div>
+            <div className="text-xs opacity-70">Auto-attaches card ID {sample.card_id}</div>
             <Button type="submit" theme={theme}>
               Submit
             </Button>

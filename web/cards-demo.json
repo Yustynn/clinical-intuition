@@ -1,0 +1,162 @@
+[
+  {
+    "study": {
+      "nct_id": "NCT01872338",
+      "title": "Mindfulness-Based Cognitive Therapy for Suicide Prevention"
+    },
+    "card_id": "NCT01872338_po_0",
+    "front_details": {
+      "question": "Did mindfulness meditation plus suicide safety planning (MBCT-S) improve suicide events in high-risk Veterans compared to VA usual care after 12 months?",
+      "intervention_fragment": "mindfulness meditation plus suicide safety planning (MBCT-S)",
+      "intervention_group_fragment": "high-risk Veterans (VA High Risk for Suicide List)",
+      "outcome_fragment": "suicide events (attempts, preparatory acts, or suicidal thoughts needing emergency care)",
+      "comparator_group_fragment": "VA usual care (treatment as usual)",
+      "timeframe_fragment": "12 months"
+    },
+    "p_value": "0.015",
+    "num_participants": 135,
+    "success": true,
+    "conditions": ["Suicide"],
+    "keywords": ["suicide prevention", "mindfulness-based cognitive therapy", "mindfulness meditation", "Veterans", "safety planning"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT00802204",
+      "title": "Dopamine and Insulin Resistance"
+    },
+    "card_id": "NCT00802204_po_0",
+    "front_details": {
+      "question": "Did a very low-calorie diet (VLCD) improve striatal dopamine D2 receptor binding in obese participants after the diet compared to baseline after 8–10 days?",
+      "intervention_fragment": "a very low-calorie diet (VLCD)",
+      "intervention_group_fragment": "obese participants after the diet",
+      "outcome_fragment": "striatal dopamine D2 receptor binding (DRD2 BP)",
+      "comparator_group_fragment": "the same obese participants at baseline",
+      "timeframe_fragment": "8–10 days"
+    },
+    "p_value": "0.04",
+    "num_participants": 33,
+    "success": true,
+    "conditions": ["Obesity"],
+    "keywords": ["Obesity", "Insulin Resistance", "Neuroendocrine regulation", "Eating behaviors", "Dopamine signaling"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT02043574",
+      "title": "Treadmill Training vs Stretching After Stroke"
+    },
+    "card_id": "NCT02043574_po_0",
+    "front_details": {
+      "question": "Did treadmill training increase daily energy expenditure vs stretching in stroke survivors at 6 months?",
+      "intervention_fragment": "treadmill training",
+      "intervention_group_fragment": "stroke survivors",
+      "outcome_fragment": "daily energy expenditure",
+      "comparator_group_fragment": "stretching control group",
+      "timeframe_fragment": "6 months"
+    },
+    "p_value": "0.02",
+    "num_participants": 142,
+    "success": true,
+    "conditions": ["Stroke", "Hemiparesis"],
+    "keywords": ["stroke rehabilitation", "exercise therapy", "physical therapy", "energy metabolism"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT00371176",
+      "title": "Exposure Therapy for Combat-Related PTSD"
+    },
+    "card_id": "NCT00371176_po_0",
+    "front_details": {
+      "question": "Did exposure therapy reduce CAPS-IV scores at 3-month follow-up in combat-related PTSD?",
+      "intervention_fragment": "exposure therapy",
+      "intervention_group_fragment": "veterans with combat-related PTSD",
+      "outcome_fragment": "CAPS-IV score",
+      "comparator_group_fragment": "waitlist control",
+      "timeframe_fragment": "3 months"
+    },
+    "p_value": "0.01",
+    "num_participants": 88,
+    "success": true,
+    "conditions": ["Post-Traumatic Stress Disorder", "Combat Disorders"],
+    "keywords": ["PTSD", "exposure therapy", "veterans", "trauma", "psychological therapy"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT00386243",
+      "title": "CBT for Chronic Low Back Pain"
+    },
+    "card_id": "NCT00386243_po_0",
+    "front_details": {
+      "question": "Did CBT improve Roland-Morris disability score at 9 months in chronic low back pain?",
+      "intervention_fragment": "cognitive behavioral therapy (CBT)",
+      "intervention_group_fragment": "patients with chronic low back pain",
+      "outcome_fragment": "Roland-Morris disability score",
+      "comparator_group_fragment": "usual care",
+      "timeframe_fragment": "9 months"
+    },
+    "p_value": "0.03",
+    "num_participants": 240,
+    "success": true,
+    "conditions": ["Chronic Low Back Pain"],
+    "keywords": ["CBT", "chronic pain", "disability", "psychological intervention", "back pain"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT01234567",
+      "title": "Mediterranean Diet for Cardiovascular Prevention"
+    },
+    "card_id": "NCT01234567_po_0",
+    "front_details": {
+      "question": "Did Mediterranean diet supplemented with olive oil reduce major cardiovascular events compared to low-fat diet at 5 years?",
+      "intervention_fragment": "Mediterranean diet with extra virgin olive oil",
+      "intervention_group_fragment": "adults at high cardiovascular risk",
+      "outcome_fragment": "major cardiovascular events",
+      "comparator_group_fragment": "low-fat diet control",
+      "timeframe_fragment": "5 years"
+    },
+    "p_value": "0.08",
+    "num_participants": 500,
+    "success": false,
+    "conditions": ["Cardiovascular Disease", "Diabetes", "Hypertension"],
+    "keywords": ["Mediterranean diet", "cardiovascular prevention", "olive oil", "nutrition", "primary prevention"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT02345678",
+      "title": "Mobile App for Depression Management"
+    },
+    "card_id": "NCT02345678_po_0",
+    "front_details": {
+      "question": "Did a smartphone app with mood tracking reduce PHQ-9 depression scores compared to waitlist control at 3 months?",
+      "intervention_fragment": "smartphone app with mood tracking and CBT modules",
+      "intervention_group_fragment": "adults with mild to moderate depression",
+      "outcome_fragment": "PHQ-9 depression scores",
+      "comparator_group_fragment": "waitlist control",
+      "timeframe_fragment": "3 months"
+    },
+    "p_value": "0.12",
+    "num_participants": 120,
+    "success": false,
+    "conditions": ["Depression", "Mood Disorders"],
+    "keywords": ["digital health", "mobile health", "depression", "CBT", "smartphone intervention"]
+  },
+  {
+    "study": {
+      "nct_id": "NCT03456789",
+      "title": "Exercise Training for Heart Failure"
+    },
+    "card_id": "NCT03456789_po_0",
+    "front_details": {
+      "question": "Did high-intensity interval training improve peak VO2 compared to moderate continuous training in heart failure patients at 12 weeks?",
+      "intervention_fragment": "high-intensity interval training (HIIT)",
+      "intervention_group_fragment": "patients with heart failure with reduced ejection fraction",
+      "outcome_fragment": "peak oxygen uptake (VO2)",
+      "comparator_group_fragment": "moderate continuous training",
+      "timeframe_fragment": "12 weeks"
+    },
+    "p_value": "0.001",
+    "num_participants": 180,
+    "success": true,
+    "conditions": ["Heart Failure", "Cardiomyopathy"],
+    "keywords": ["HIIT", "exercise training", "heart failure", "cardiopulmonary fitness", "rehabilitation"]
+  }
+]

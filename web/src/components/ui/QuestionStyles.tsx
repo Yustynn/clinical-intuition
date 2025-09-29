@@ -4,36 +4,40 @@ import type { PredictionCard } from '../../types';
 
 interface QuestionStylesProps {
   theme: Theme;
-  parts: PredictionCard['parts'];
+  fragments: PredictionCard['front_details'];
 }
 
-const QuestionStyles: React.FC<QuestionStylesProps> = ({ theme, parts }) => {
-  const { intervention, verb, outcome, timeframe, population, comparator } = parts;
+const QuestionStyles: React.FC<QuestionStylesProps> = ({ fragments }) => {
+  const { 
+    intervention_fragment, 
+    intervention_group_fragment, 
+    outcome_fragment, 
+    comparator_group_fragment, 
+    timeframe_fragment 
+  } = fragments;
 
   return (
     <div className="mt-4">
       <div className="text-base leading-relaxed">
         Did{' '}
         <span className="px-1 bg-amber-500/15 ring-1 ring-amber-500/20">
-          {intervention}
+          {intervention_fragment}
         </span>{' '}
-        <span className="px-1 bg-emerald-500/15 ring-1 ring-emerald-500/20 text-emerald-300 font-semibold">
-          {verb}
-        </span>{' '}
+        improve{' '}
         <span className="px-1 bg-teal-500/15 ring-1 ring-teal-500/20">
-          {outcome}
-        </span>{' '}
-        at{' '}
-        <span className="px-1 bg-sky-500/15 ring-1 ring-sky-500/20">
-          {timeframe}
+          {outcome_fragment}
         </span>{' '}
         in{' '}
         <span className="px-1 bg-violet-500/15 ring-1 ring-violet-500/20">
-          {population}
+          {intervention_group_fragment}
         </span>{' '}
-        vs{' '}
+        compared to{' '}
         <span className="px-1 bg-zinc-500/15 ring-1 ring-zinc-500/20">
-          {comparator}
+          {comparator_group_fragment}
+        </span>{' '}
+        after{' '}
+        <span className="px-1 bg-sky-500/15 ring-1 ring-sky-500/20">
+          {timeframe_fragment}
         </span>
         ?
       </div>

@@ -46,7 +46,8 @@ export function useCardDemo() {
   const haptics = useHaptics();
 
   const answer = (choice: 'Yes' | 'No') => {
-    const isCorrect = choice === sample.correct;
+    const correctAnswer = sample.success ? 'Yes' : 'No';
+    const isCorrect = choice === correctAnswer;
     setState((s) => ({
       ...s,
       phase: 'reveal',

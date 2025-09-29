@@ -1,20 +1,22 @@
 export interface PredictionCard {
-  id: string;
-  question: string;
-  context: string;
-  why: string;
-  others: number;
-  n: number;
-  nct: string;
-  correct: 'Yes' | 'No';
-  parts: {
-    intervention: string;
-    verb: string;
-    outcome: string;
-    timeframe: string;
-    population: string;
-    comparator: string;
+  study: {
+    nct_id: string;
+    title: string;
   };
+  card_id: string;
+  front_details: {
+    question: string;
+    intervention_fragment: string;
+    intervention_group_fragment: string;
+    outcome_fragment: string;
+    comparator_group_fragment: string;
+    timeframe_fragment: string;
+  };
+  p_value: string;
+  num_participants: number;
+  success: boolean;
+  conditions: string[];
+  keywords: string[];
 }
 
 export interface User {
