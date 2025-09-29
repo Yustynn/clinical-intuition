@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
 
 export const STORAGE_KEYS = {
   ANONYMOUS_SESSION: 'anonymous_session_data',

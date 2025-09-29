@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { getTheme } from './utils/theme';
 import Landing from './components/layout/Landing';
 import type { ThemeMode } from './utils/theme';

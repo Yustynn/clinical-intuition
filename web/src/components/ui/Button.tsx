@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { Theme } from '../../utils/theme';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragEnd' | 'onDragStart'> {
   variant?: 'primary' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
   theme: Theme;
@@ -14,7 +14,10 @@ const Button: React.FC<ButtonProps> = ({
   size = 'md', 
   theme, 
   children,
-  ...props 
+  onClick,
+  disabled,
+  type,
+ 
 }) => {
   const sizeClasses = {
     sm: 'h-9 px-3 text-sm',
@@ -30,7 +33,9 @@ const Button: React.FC<ButtonProps> = ({
       whileTap={{ scale: 0.94 }}
       transition={{ type: 'spring', stiffness: 300, damping: 18 }}
       className={`${baseClasses} ${sizeClasses[size]} ${variantClasses} ${className}`}
-      {...props}
+      onClick={onClick}
+      disabled={disabled}
+      type={type}
     >
       {children}
     </motion.button>

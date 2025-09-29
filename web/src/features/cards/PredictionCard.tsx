@@ -114,13 +114,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNe
               transition={
                 state.correct 
                   ? { type: 'spring', stiffness: 260, damping: 18, duration: 0.4 }
-                  : { 
-                      x: {
-                        type: 'keyframes',
-                        values: [0, -6, 6, -3, 3, 0],
-                        duration: 0.4
-                      }
-                    }
+                  : { duration: 0.4 }
               }
               className={`flex items-center gap-2 text-base font-semibold ${
                 state.correct 
