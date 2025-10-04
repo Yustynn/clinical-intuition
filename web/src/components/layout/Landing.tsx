@@ -29,13 +29,13 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange }) => {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <header className="w-full max-w-[420px] flex items-start justify-between">
+      <header className="w-full max-w-[480px] flex items-start justify-between">
         <div>
-          <h1 className={`text-2xl md:text-3xl font-semibold ${theme.font}`}>
-            How sharp is your clinical intuition?
+          <h1 className={`text-3xl md:text-3xl font-semibold ${theme.font}`}>
+            Can you beat scientists' intuitions?
           </h1>
           <p className={`opacity-70 mt-1 ${theme.font}`}>
-            Real results. Real trials. Guess yes/no — build intuition fast.
+            See if you can predict which behavioral interventions worked and which didn't. Based on real trials!
           </p>
         </div>
         <ModeToggle mode={mode} onModeChange={onModeChange} />
