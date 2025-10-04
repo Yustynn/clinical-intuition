@@ -1,13 +1,38 @@
 import { useState, useEffect } from 'react';
 import { useHaptics } from './useHaptics';
-import { DEMO_DECK, getFilteredDeck } from '../constants';
+import { getInitialDeck, getFilteredDeck, STORAGE_KEYS } from '../constants';
 import { trackCardAnswered, trackCardCompleted, trackMilestone } from '../utils/analytics';
 import type { PredictionCard, GamePhase } from '../types';
+
+// Load deck stats from localStorage
+function loadDeckStats(): Record<string, DeckStats> {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.DECK_STATS);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Save deck stats to localStorage
+function saveDeckStats(stats: Record<string, DeckStats>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.DECK_STATS, JSON.stringify(stats));
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+}
 
 interface ParticlePoint {
   id: number;
   x: number;
   y: number;
+}
+
+interface DeckStats {
+  totalCorrect: number;
+  totalWrong: number;
+  cardsPlayed: number;
 }
 
 interface CardDemoState {
@@ -28,75 +53,124 @@ interface CardDemoState {
   totalWrong: number;
   cardsPlayed: number;
   deck: PredictionCard[];
+  deckStats: Record<string, DeckStats>;
+  currentDeckKey: string;
 }
 
-export function useCardDemo(selectedDeck: string | null = null) {
-  const [state, setState] = useState<CardDemoState>({
-    idx: 0,
-    phase: 'question',
-    guess: null,
-    correct: null,
-    openDetails: false,
-    openShare: false,
-    openReport: false,
-    toast: '',
-    flash: null,
-    streak: 0,
-    pop: false,
-    celebrate: false,
-    trail: [],
-    totalCorrect: 0,
-    totalWrong: 0,
-    cardsPlayed: 0,
-    deck: selectedDeck ? getFilteredDeck(selectedDeck) : DEMO_DECK,
-  });
+export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | null = null) {
+  const deckKey = selectedDeck || 'All';
 
-  // Update deck when selectedDeck changes
-  useEffect(() => {
-    const newDeck = selectedDeck ? getFilteredDeck(selectedDeck) : DEMO_DECK;
-    setState((s) => ({
-      ...s,
-      deck: newDeck,
+  const [state, setState] = useState<CardDemoState>(() => {
+    const savedStats = loadDeckStats();
+    const currentStats = savedStats[deckKey] || {
+      totalCorrect: 0,
+      totalWrong: 0,
+      cardsPlayed: 0,
+    };
+
+    return {
       idx: 0,
       phase: 'question',
       guess: null,
       correct: null,
+      openDetails: false,
+      openShare: false,
+      openReport: false,
+      toast: '',
       flash: null,
+      streak: 0,
       pop: false,
       celebrate: false,
       trail: [],
-    }));
-  }, [selectedDeck]);
+      totalCorrect: currentStats.totalCorrect,
+      totalWrong: currentStats.totalWrong,
+      cardsPlayed: currentStats.cardsPlayed,
+      deck: selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards),
+      deckStats: savedStats,
+      currentDeckKey: deckKey,
+    };
+  });
 
-  const sample: PredictionCard = state.deck[state.idx] || DEMO_DECK[0];
+  // Update deck when selectedDeck changes
+  useEffect(() => {
+    const newDeckKey = selectedDeck || 'All';
+    const newDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
+
+    setState((s) => {
+      // Get stats for this deck, or initialize if not present
+      const stats = s.deckStats[newDeckKey] || {
+        totalCorrect: 0,
+        totalWrong: 0,
+        cardsPlayed: 0,
+      };
+
+      return {
+        ...s,
+        deck: newDeck,
+        currentDeckKey: newDeckKey,
+        idx: 0,
+        phase: 'question',
+        guess: null,
+        correct: null,
+        flash: null,
+        pop: false,
+        celebrate: false,
+        trail: [],
+        totalCorrect: stats.totalCorrect,
+        totalWrong: stats.totalWrong,
+        cardsPlayed: stats.cardsPlayed,
+      };
+    });
+  }, [selectedDeck, allCards]);
+
+  const sample: PredictionCard = state.deck[state.idx] || allCards[0];
   const haptics = useHaptics();
 
   const answer = (choice: 'Yes' | 'No') => {
     const correctAnswer = sample.success ? 'Yes' : 'No';
     const isCorrect = choice === correctAnswer;
     const newCardsPlayed = state.cardsPlayed + 1;
-    
+
     // Track the answer
     trackCardAnswered(choice.toLowerCase() as 'yes' | 'no', isCorrect, newCardsPlayed);
-    
-    setState((s) => ({
-      ...s,
-      phase: 'reveal',
-      guess: choice,
-      correct: isCorrect,
-      flash: isCorrect 
-        ? { a: '#FBBF24', b: '#F59E0B' } 
-        : { a: '#FB7185', b: '#E11D48' },
-      streak: isCorrect ? s.streak + 1 : 0,
-      pop: isCorrect,
-      celebrate: isCorrect,
-      totalCorrect: isCorrect ? s.totalCorrect + 1 : s.totalCorrect,
-      totalWrong: !isCorrect ? s.totalWrong + 1 : s.totalWrong,
-      cardsPlayed: newCardsPlayed,
-    }));
-    
+
+    setState((s) => {
+      const newTotalCorrect = isCorrect ? s.totalCorrect + 1 : s.totalCorrect;
+      const newTotalWrong = !isCorrect ? s.totalWrong + 1 : s.totalWrong;
+
+      // Update stats for current deck
+      const updatedDeckStats = {
+        ...s.deckStats,
+        [s.currentDeckKey]: {
+          totalCorrect: newTotalCorrect,
+          totalWrong: newTotalWrong,
+          cardsPlayed: newCardsPlayed,
+        },
+      };
+
+      // Save to localStorage
+      saveDeckStats(updatedDeckStats);
+
+      return {
+        ...s,
+        phase: 'reveal',
+        guess: choice,
+        correct: isCorrect,
+        flash: isCorrect
+          ? { a: '#FBBF24', b: '#F59E0B' }
+          : { a: '#FB7185', b: '#E11D48' },
+        streak: isCorrect ? s.streak + 1 : 0,
+        pop: isCorrect,
+        celebrate: isCorrect,
+        totalCorrect: newTotalCorrect,
+        totalWrong: newTotalWrong,
+        cardsPlayed: newCardsPlayed,
+        deckStats: updatedDeckStats,
+      };
+    });
+
     haptics(isCorrect ? 30 : [40, 60, 40]);
-    
+
     setTimeout(() => setState((s) => ({ ...s, pop: false })), 600);
     setTimeout(() => setState((s) => ({ ...s, celebrate: false })), 1100);
   };

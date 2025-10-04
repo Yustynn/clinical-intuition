@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   ANONYMOUS_SESSION: 'anonymous_session_data',
   THEME: 'retro_theme_mode',
   USER_PREFERENCES: 'user_preferences',
+  DECK_STATS: 'deck_stats',
 } as const;
 
 export const HAPTIC_PATTERNS = {
@@ -13,7 +14,6 @@ export const HAPTIC_PATTERNS = {
 } as const;
 
 import type { PredictionCard } from '../types';
-import cardsData from '../../cards.json';
 
 // Fisher-Yates shuffle algorithm
 function shuffleArray<T>(array: T[]): T[] {
@@ -25,14 +25,15 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-export const ALL_CARDS: PredictionCard[] = cardsData as PredictionCard[];
-export const DEMO_DECK: PredictionCard[] = shuffleArray([...ALL_CARDS]);
+export function getInitialDeck(allCards: PredictionCard[]): PredictionCard[] {
+  return shuffleArray([...allCards]);
+}
 
 // Get all unique decks with counts
-export function getDeckCounts(): { deck: string; count: number }[] {
+export function getDeckCounts(allCards: PredictionCard[]): { deck: string; count: number }[] {
   const deckMap = new Map<string, number>();
 
-  ALL_CARDS.forEach(card => {
+  allCards.forEach(card => {
     if (card.decks && Array.isArray(card.decks)) {
       card.decks.forEach(deck => {
         deckMap.set(deck, (deckMap.get(deck) || 0) + 1);
@@ -45,14 +46,31 @@ export function getDeckCounts(): { deck: string; count: number }[] {
     .sort((a, b) => a.deck.localeCompare(b.deck));
 }
 
-export function getFilteredDeck(deckName: string | null): PredictionCard[] {
+export function getFilteredDeck(allCards: PredictionCard[], deckName: string | null): PredictionCard[] {
   if (!deckName || deckName === 'All') {
-    return shuffleArray([...ALL_CARDS]);
+    return shuffleArray([...allCards]);
   }
 
-  const filtered = ALL_CARDS.filter(card =>
+  const filtered = allCards.filter(card =>
     card.decks && Array.isArray(card.decks) && card.decks.includes(deckName)
   );
 
   return shuffleArray(filtered);
+}
+
+export function getDeckBaseRate(allCards: PredictionCard[], deckName: string | null): number {
+  let cards: PredictionCard[];
+
+  if (!deckName || deckName === 'All') {
+    cards = allCards;
+  } else {
+    cards = allCards.filter(card =>
+      card.decks && Array.isArray(card.decks) && card.decks.includes(deckName)
+    );
+  }
+
+  if (cards.length === 0) return 0;
+
+  const successCount = cards.filter(card => card.success).length;
+  return Math.round((successCount / cards.length) * 100);
 }

@@ -5,17 +5,25 @@ import { Button, Sheet, Toast } from '../../components/ui';
 import { GradientFlash, ScorePop, EmojiBurst, ParticleTrail } from '../../components/ui/Effects';
 import QuestionStyles from '../../components/ui/QuestionStyles';
 import { useCardDemo } from '../../hooks/useCardDemo';
+import { getDeckBaseRate } from '../../constants';
 import type { Theme } from '../../utils/theme';
+import type { PredictionCard as PredictionCardType } from '../../types';
 
 interface PredictionCardProps {
   theme: Theme;
+  allCards: PredictionCardType[];
   selectedDeck?: string | null;
   onAnswered?: () => void;
   onNext?: () => void;
 }
 
-const PredictionCard: React.FC<PredictionCardProps> = ({ theme, selectedDeck, onAnswered, onNext }) => {
-  const { state, setState, sample, answer, next, share, addTrail } = useCardDemo(selectedDeck);
+const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, selectedDeck = null, onAnswered, onNext }) => {
+  const { state, setState, sample, answer, next, share, addTrail } = useCardDemo(allCards, selectedDeck);
+
+  const baseRate = getDeckBaseRate(allCards, selectedDeck);
+  const playerAccuracy = state.cardsPlayed > 0
+    ? Math.round((state.totalCorrect / state.cardsPlayed) * 100)
+    : 0;
   
   const onYes = (e: React.MouseEvent<HTMLButtonElement>) => {
     addTrail(e);
@@ -67,9 +75,16 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, selectedDeck, on
         {/* Header */}
         <div className="flex items-center justify-between text-xs opacity-70">
           <div className="inline-flex items-center gap-2">
-            <span className="inline-flex items-center gap-1">
-              PLAY {streakHot && <Flame className={`h-4 w-4 ${theme.accent}`} />}
+            <span>Scientist: {baseRate}%</span>
+            <span>
+              {state.cardsPlayed >= 10
+                ? `You: ${playerAccuracy}%`
+                : `You: (do ${10 - state.cardsPlayed} cards)%`
+              }
             </span>
+          </div>
+          <div className="inline-flex items-center gap-2">
+            {streakHot && <Flame className={`h-4 w-4 ${theme.accent}`} />}
             {state.cardsPlayed > 0 && (
               <div className="inline-flex items-center gap-3">
                 <span className="inline-flex items-center gap-1">
@@ -83,7 +98,6 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, selectedDeck, on
               </div>
             )}
           </div>
-          <div>{state.cardsPlayed} played</div>
         </div>
 
         {/* Question */}
