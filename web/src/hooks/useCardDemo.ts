@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHaptics } from './useHaptics';
-import { DEMO_DECK } from '../constants';
+import { DEMO_DECK, getFilteredDeck } from '../constants';
 import { trackCardAnswered, trackCardCompleted, trackMilestone } from '../utils/analytics';
 import type { PredictionCard, GamePhase } from '../types';
 
@@ -27,9 +27,10 @@ interface CardDemoState {
   totalCorrect: number;
   totalWrong: number;
   cardsPlayed: number;
+  deck: PredictionCard[];
 }
 
-export function useCardDemo() {
+export function useCardDemo(selectedDeck: string | null = null) {
   const [state, setState] = useState<CardDemoState>({
     idx: 0,
     phase: 'question',
@@ -47,9 +48,27 @@ export function useCardDemo() {
     totalCorrect: 0,
     totalWrong: 0,
     cardsPlayed: 0,
+    deck: selectedDeck ? getFilteredDeck(selectedDeck) : DEMO_DECK,
   });
 
-  const sample: PredictionCard = DEMO_DECK[state.idx];
+  // Update deck when selectedDeck changes
+  useEffect(() => {
+    const newDeck = selectedDeck ? getFilteredDeck(selectedDeck) : DEMO_DECK;
+    setState((s) => ({
+      ...s,
+      deck: newDeck,
+      idx: 0,
+      phase: 'question',
+      guess: null,
+      correct: null,
+      flash: null,
+      pop: false,
+      celebrate: false,
+      trail: [],
+    }));
+  }, [selectedDeck]);
+
+  const sample: PredictionCard = state.deck[state.idx] || DEMO_DECK[0];
   const haptics = useHaptics();
 
   const answer = (choice: 'Yes' | 'No') => {
@@ -86,15 +105,15 @@ export function useCardDemo() {
     setState((s) => {
       // Track card completion
       trackCardCompleted(s.cardsPlayed, s.streak, s.totalCorrect, s.totalWrong);
-      
+
       // Track milestones every 5 cards
       if (s.cardsPlayed > 0 && s.cardsPlayed % 5 === 0) {
         trackMilestone(s.cardsPlayed, s.totalCorrect, s.totalWrong);
       }
-      
+
       return {
         ...s,
-        idx: (s.idx + 1) % DEMO_DECK.length,
+        idx: (s.idx + 1) % s.deck.length,
         phase: 'question',
         guess: null,
         correct: null,

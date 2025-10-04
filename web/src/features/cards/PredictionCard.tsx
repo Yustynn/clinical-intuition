@@ -9,12 +9,13 @@ import type { Theme } from '../../utils/theme';
 
 interface PredictionCardProps {
   theme: Theme;
+  selectedDeck?: string | null;
   onAnswered?: () => void;
   onNext?: () => void;
 }
 
-const PredictionCard: React.FC<PredictionCardProps> = ({ theme, onAnswered, onNext }) => {
-  const { state, setState, sample, answer, next, share, addTrail } = useCardDemo();
+const PredictionCard: React.FC<PredictionCardProps> = ({ theme, selectedDeck, onAnswered, onNext }) => {
+  const { state, setState, sample, answer, next, share, addTrail } = useCardDemo(selectedDeck);
   
   const onYes = (e: React.MouseEvent<HTMLButtonElement>) => {
     addTrail(e);

@@ -18,6 +18,7 @@ export interface PredictionCard {
   success: boolean;
   conditions: string[];
   keywords: string[];
+  decks?: string[];
 }
 
 export interface User {

@@ -25,4 +25,34 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-export const DEMO_DECK: PredictionCard[] = shuffleArray(cardsData as PredictionCard[]);
+export const ALL_CARDS: PredictionCard[] = cardsData as PredictionCard[];
+export const DEMO_DECK: PredictionCard[] = shuffleArray([...ALL_CARDS]);
+
+// Get all unique decks with counts
+export function getDeckCounts(): { deck: string; count: number }[] {
+  const deckMap = new Map<string, number>();
+
+  ALL_CARDS.forEach(card => {
+    if (card.decks && Array.isArray(card.decks)) {
+      card.decks.forEach(deck => {
+        deckMap.set(deck, (deckMap.get(deck) || 0) + 1);
+      });
+    }
+  });
+
+  return Array.from(deckMap.entries())
+    .map(([deck, count]) => ({ deck, count }))
+    .sort((a, b) => a.deck.localeCompare(b.deck));
+}
+
+export function getFilteredDeck(deckName: string | null): PredictionCard[] {
+  if (!deckName || deckName === 'All') {
+    return shuffleArray([...ALL_CARDS]);
+  }
+
+  const filtered = ALL_CARDS.filter(card =>
+    card.decks && Array.isArray(card.decks) && card.decks.includes(deckName)
+  );
+
+  return shuffleArray(filtered);
+}
