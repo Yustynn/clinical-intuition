@@ -10,6 +10,44 @@ from models import PValue, Intervention, Group, PrimaryOutcome, ValidStudy
 RAW_STUDIES_DIR = "../raw_studies"
 
 
+DECK_TO_TERMS = {
+    "Anxiety": ["anxiety", "anxious"],
+    "Depression": ["depression", "depressed", "depressive"],
+    "Pain": ["pain", "painful", "ache", "aches", "aching"],
+    "Sleep": ["sleep", "insomnia", "sleeplessness", "sleepless"],
+    "Stress": ["stress", "stressed", "distress"],
+    "ADHD": ["adhd", "attention deficit hyperactivity disorder"],
+    "Substance Use": [
+        "substance use",
+        "substance abuse",
+        "addiction",
+        "addictive",
+        "alcohol",
+        "drug",
+        "drugs",
+        "opioid",
+        "opioids",
+        "cocaine",
+        "heroin",
+        "marijuana",
+        "tobacco",
+        "smoking",
+        "vaping",
+    ],
+    "PTSD": ["ptsd", "post-traumatic stress disorder"],
+    "Bipolar Disorder": ["bipolar", "manic depression"],
+    "Schizophrenia": ["schizophrenia", "schizophrenic"],
+    "HIV": ["hiv", "human immunodeficiency virus"],
+    "Smoking": ["smoking", "tobacco", "cigarette", "cigarettes", "vaping"],
+    "Obesity": ["obesity", "obese", "overweight", "weight loss", "weight"],
+    "Alcohol Use": ["alcohol", "drinking", "alcoholism", "alcoholic"],
+    "Diabetes": ["diabetes", "diabetic", "blood sugar", "insulin"],
+    "PTSD": ["ptsd", "traumatic stress disorder"],
+    "Insomnia": ["insomnia", "sleeplessness", "sleepless"],
+}
+
+
+
 def parse_p_value(p: str) -> PValue | None:
     """
     Parse a p-value string and return a tuple of (comparison, value).
@@ -117,6 +155,17 @@ def load_raw_studies_with_p_values(raw_studies_dir: str = RAW_STUDIES_DIR, max_s
     return raw_studies_p
 
 
+def extract_decks(raw_study: dict) -> list[str]:
+    found_decks = set()
+    for c in raw_study["protocolSection"]["conditionsModule"]["conditions"]:
+        found_decks = set()
+        for deck, terms in DECK_TO_TERMS.items():
+            if any(t in c.lower() for t in terms):
+                found_decks.add(deck)
+
+    return list(found_decks)
+
+
 def process_raw_study_with_p_values(s: dict[str, Any]) -> ValidStudy | None:
     primary_outcomes = []
     nct_id = s["protocolSection"]["identificationModule"]["nctId"]
@@ -177,6 +226,7 @@ def process_raw_study_with_p_values(s: dict[str, Any]) -> ValidStudy | None:
             interventions=interventions,
             conditions=s["protocolSection"]["conditionsModule"].get("conditions", []),
             keywords=s["protocolSection"]["conditionsModule"].get("keywords", []),
+            decks=extract_decks(s),
         )
 
 
