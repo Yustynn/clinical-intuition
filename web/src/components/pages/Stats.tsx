@@ -3,7 +3,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { fetchDeckStats, fetchCardAnswers } from '../../lib/supabaseService';
 import { getDeckBaseRate } from '../../constants';
 import { Sheet } from '../../components/ui';
-import { ArrowLeft, TrendingUp, Target, Zap, ExternalLink } from 'lucide-react';
+import QuestionStyles from '../../components/ui/QuestionStyles';
+import { ArrowLeft, TrendingUp, Target, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Theme } from '../../utils/theme';
 import type { PredictionCard } from '../../types';
 
@@ -33,6 +34,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
   const [recentAnswers, setRecentAnswers] = useState<CardAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<CardAnswer | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Create card lookup map
   const cardMap = useMemo(() => {
@@ -277,7 +279,10 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
       {selectedAnswer && (
         <Sheet
           open={!!selectedAnswer}
-          onClose={() => setSelectedAnswer(null)}
+          onClose={() => {
+            setSelectedAnswer(null);
+            setShowDetails(false);
+          }}
           title="Card Review"
           theme={theme}
         >
@@ -290,10 +295,10 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
 
             return (
               <div className="space-y-4">
-                {/* Question */}
+                {/* Question with highlighted fragments */}
                 <div>
-                  <div className="text-sm opacity-70 mb-1">Question</div>
-                  <div className="text-base">{card.front_details.question}</div>
+                  <div className="text-sm opacity-70 mb-2">Question</div>
+                  <QuestionStyles theme={theme} fragments={card.front_details} />
                 </div>
 
                 {/* Your Answer */}
@@ -315,17 +320,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
                 <div>
                   <div className="text-sm opacity-70 mb-1">Correct Answer</div>
                   <div className="font-medium">{card.success ? 'Yes' : 'No'}</div>
-                </div>
-
-                {/* Study Details */}
-                <div>
-                  <div className="text-sm opacity-70 mb-1">Study Details</div>
-                  <div className="text-sm space-y-1">
-                    <div><span className="opacity-70">Intervention:</span> {capitalizedIntervention}</div>
-                    <div><span className="opacity-70">Outcome:</span> {card.front_details.outcome_fragment}</div>
-                    <div><span className="opacity-70">Participants:</span> {card.num_participants}</div>
-                    <div><span className="opacity-70">P-value:</span> {card.p_value}</div>
-                  </div>
+                  <div className="text-xs opacity-60 mt-1">P-value: {card.p_value}</div>
                 </div>
 
                 {/* Decks */}
@@ -347,16 +342,65 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
                   </div>
                 )}
 
-                {/* Link to study */}
-                <a
-                  href={`https://clinicaltrials.gov/study/${card.study.nct_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs hover:opacity-100 transition-opacity`}
+                {/* More Details Toggle */}
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className={`inline-flex items-center gap-1 text-sm opacity-70 hover:opacity-100 transition-opacity`}
                 >
-                  <ExternalLink className="h-3 w-3" />
-                  View on ClinicalTrials.gov
-                </a>
+                  {showDetails ? 'Hide Details' : 'More Details'}
+                  {showDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+
+                {/* Expandable Details */}
+                {showDetails && (
+                  <div className="space-y-3 pt-2 border-t border-amber-300">
+                    <div>
+                      <div className="font-medium text-sm">Study Title</div>
+                      <div className="opacity-80 text-sm">{card.study.title}</div>
+                    </div>
+
+                    {card.study.brief_description && (
+                      <div>
+                        <div className="font-medium text-sm">Study Description</div>
+                        <div className="opacity-80 text-sm leading-relaxed">{card.study.brief_description}</div>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="font-medium text-sm">Participants</div>
+                      <div className="opacity-80 text-sm">{card.front_details.intervention_group_fragment} (n={card.num_participants})</div>
+                    </div>
+
+                    <div>
+                      <div className="font-medium text-sm">Intervention & Comparator</div>
+                      <div className="opacity-80 text-sm">{capitalizedIntervention} vs {card.front_details.comparator_group_fragment}</div>
+                    </div>
+
+                    <div>
+                      <div className="font-medium text-sm">Statistical measure</div>
+                      <div className="opacity-80 text-sm">p-value = {card.p_value}, n={card.num_participants}</div>
+                    </div>
+
+                    <div>
+                      <div className="font-medium text-sm">Conditions</div>
+                      <div className="opacity-80 text-sm">{card.conditions.join(', ')}</div>
+                    </div>
+
+                    {card.keywords && card.keywords.length > 0 && (
+                      <div>
+                        <div className="font-medium text-sm">Keywords</div>
+                        <div className="opacity-80 text-sm">{card.keywords.join(', ')}</div>
+                      </div>
+                    )}
+
+                    <div className="pt-2 text-xs opacity-70">
+                      Source:{' '}
+                      <a className="underline" href={`https://clinicaltrials.gov/study/${card.study.nct_id}`} target="_blank" rel="noopener noreferrer">
+                        {card.study.nct_id}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
