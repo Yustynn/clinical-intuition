@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useHaptics } from './useHaptics';
+import { useAuth } from './useAuth';
+import { useSyncStats } from './useSyncStats';
 import { getInitialDeck, getFilteredDeck, STORAGE_KEYS } from '../constants';
 import { trackCardAnswered, trackCardCompleted, trackMilestone } from '../utils/analytics';
+import { upsertDeckStats, saveCardAnswer } from '../lib/supabaseService';
 import type { PredictionCard, GamePhase } from '../types';
 
 // Load deck stats from localStorage
@@ -18,6 +21,60 @@ function loadDeckStats(): Record<string, DeckStats> {
 function saveDeckStats(stats: Record<string, DeckStats>) {
   try {
     localStorage.setItem(STORAGE_KEYS.DECK_STATS, JSON.stringify(stats));
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+}
+
+// Load card answers from localStorage
+function loadCardAnswers(): Array<{
+  card_id: string;
+  deck_name: string;
+  answer: 'Yes' | 'No';
+  correct: boolean;
+  timestamp: string;
+}> {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.CARD_ANSWERS);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Save card answer to localStorage
+function saveCardAnswerToLocal(answer: {
+  card_id: string;
+  deck_name: string;
+  answer: 'Yes' | 'No';
+  correct: boolean;
+}) {
+  try {
+    const answers = loadCardAnswers();
+    answers.push({
+      ...answer,
+      timestamp: new Date().toISOString(),
+    });
+    localStorage.setItem(STORAGE_KEYS.CARD_ANSWERS, JSON.stringify(answers));
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+}
+
+// Load answered card IDs from localStorage
+function loadAnsweredCardIds(): Set<string> {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.ANSWERED_CARD_IDS);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+// Save answered card IDs to localStorage
+function saveAnsweredCardIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ANSWERED_CARD_IDS, JSON.stringify(Array.from(ids)));
   } catch {
     // Silently fail if localStorage is not available
   }
@@ -55,9 +112,12 @@ interface CardDemoState {
   deck: PredictionCard[];
   deckStats: Record<string, DeckStats>;
   currentDeckKey: string;
+  answeredCardIds: Set<string>;
 }
 
 export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | null = null) {
+  const { user } = useAuth();
+  const { syncedStats, syncedAnsweredCardIds } = useSyncStats(); // Sync stats when user signs in
   const deckKey = selectedDeck || 'All';
 
   const [state, setState] = useState<CardDemoState>(() => {
@@ -67,6 +127,11 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
       totalWrong: 0,
       cardsPlayed: 0,
     };
+    const answeredCardIds = loadAnsweredCardIds();
+
+    // Filter deck to exclude answered cards
+    const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
+    const filteredDeck = baseDeck.filter(card => !answeredCardIds.has(card.card_id));
 
     return {
       idx: 0,
@@ -85,16 +150,59 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
       totalCorrect: currentStats.totalCorrect,
       totalWrong: currentStats.totalWrong,
       cardsPlayed: currentStats.cardsPlayed,
-      deck: selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards),
+      deck: filteredDeck.length > 0 ? filteredDeck : baseDeck,
       deckStats: savedStats,
       currentDeckKey: deckKey,
+      answeredCardIds,
     };
   });
+
+  // Update state when sync completes
+  useEffect(() => {
+    if (syncedStats) {
+      setState((s) => {
+        const stats = syncedStats[s.currentDeckKey] || {
+          totalCorrect: 0,
+          totalWrong: 0,
+          cardsPlayed: 0,
+        };
+
+        // Merge answered card IDs (use synced if available, otherwise keep local)
+        const mergedAnsweredCardIds = syncedAnsweredCardIds.size > 0
+          ? syncedAnsweredCardIds
+          : s.answeredCardIds;
+
+        // Filter deck to exclude answered cards
+        const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
+        const filteredDeck = baseDeck.filter(card => !mergedAnsweredCardIds.has(card.card_id));
+
+        // Save synced answered card IDs to localStorage
+        if (syncedAnsweredCardIds.size > 0) {
+          saveAnsweredCardIds(syncedAnsweredCardIds);
+        }
+
+        return {
+          ...s,
+          deck: filteredDeck.length > 0 ? filteredDeck : baseDeck,
+          deckStats: syncedStats,
+          answeredCardIds: mergedAnsweredCardIds,
+          totalCorrect: stats.totalCorrect,
+          totalWrong: stats.totalWrong,
+          cardsPlayed: stats.cardsPlayed,
+          idx: 0,
+          phase: 'question',
+          guess: null,
+          correct: null,
+        };
+      });
+    }
+  }, [syncedStats, syncedAnsweredCardIds, selectedDeck, allCards]);
 
   // Update deck when selectedDeck changes
   useEffect(() => {
     const newDeckKey = selectedDeck || 'All';
-    const newDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
+    const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
+    const filteredDeck = baseDeck.filter(card => !state.answeredCardIds.has(card.card_id));
 
     setState((s) => {
       // Get stats for this deck, or initialize if not present
@@ -106,7 +214,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
 
       return {
         ...s,
-        deck: newDeck,
+        deck: filteredDeck.length > 0 ? filteredDeck : baseDeck,
         currentDeckKey: newDeckKey,
         idx: 0,
         phase: 'question',
@@ -126,7 +234,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
   const sample: PredictionCard = state.deck[state.idx] || allCards[0];
   const haptics = useHaptics();
 
-  const answer = (choice: 'Yes' | 'No') => {
+  const answer = async (choice: 'Yes' | 'No') => {
     const correctAnswer = sample.success ? 'Yes' : 'No';
     const isCorrect = choice === correctAnswer;
     const newCardsPlayed = state.cardsPlayed + 1;
@@ -148,8 +256,41 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         },
       };
 
-      // Save to localStorage
+      // Save to localStorage (always)
       saveDeckStats(updatedDeckStats);
+
+      // Save card answer to localStorage (always, even for anonymous users)
+      saveCardAnswerToLocal({
+        card_id: sample.card_id,
+        deck_name: s.currentDeckKey,
+        answer: choice,
+        correct: isCorrect,
+      });
+
+      // Track answered card ID
+      const newAnsweredCardIds = new Set(s.answeredCardIds);
+      newAnsweredCardIds.add(sample.card_id);
+      saveAnsweredCardIds(newAnsweredCardIds);
+
+      // Save to Supabase if user is signed in (async, don't block UI)
+      if (user) {
+        const deckStats = updatedDeckStats[s.currentDeckKey];
+
+        // Save deck stats
+        upsertDeckStats(user.id, s.currentDeckKey, deckStats).catch((err) => {
+          console.error('Failed to sync deck stats to Supabase:', err);
+        });
+
+        // Save individual card answer
+        saveCardAnswer(user.id, {
+          card_id: sample.card_id,
+          deck_name: s.currentDeckKey,
+          answer: choice,
+          correct: isCorrect,
+        }).catch((err) => {
+          console.error('Failed to save card answer to Supabase:', err);
+        });
+      }
 
       return {
         ...s,
@@ -166,6 +307,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         totalWrong: newTotalWrong,
         cardsPlayed: newCardsPlayed,
         deckStats: updatedDeckStats,
+        answeredCardIds: newAnsweredCardIds,
       };
     });
 
@@ -185,9 +327,17 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         trackMilestone(s.cardsPlayed, s.totalCorrect, s.totalWrong);
       }
 
+      // Find next unanswered card index
+      let nextIdx = (s.idx + 1) % s.deck.length;
+      let attempts = 0;
+      while (s.answeredCardIds.has(s.deck[nextIdx]?.card_id) && attempts < s.deck.length) {
+        nextIdx = (nextIdx + 1) % s.deck.length;
+        attempts++;
+      }
+
       return {
         ...s,
-        idx: (s.idx + 1) % s.deck.length,
+        idx: nextIdx,
         phase: 'question',
         guess: null,
         correct: null,

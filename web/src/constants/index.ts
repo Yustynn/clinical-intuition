@@ -5,6 +5,8 @@ export const STORAGE_KEYS = {
   THEME: 'retro_theme_mode',
   USER_PREFERENCES: 'user_preferences',
   DECK_STATS: 'deck_stats',
+  CARD_ANSWERS: 'card_answers',
+  ANSWERED_CARD_IDS: 'answered_card_ids',
 } as const;
 
 export const HAPTIC_PATTERNS = {

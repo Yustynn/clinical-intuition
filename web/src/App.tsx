@@ -3,6 +3,7 @@ import { getTheme } from './utils/theme';
 import Landing from './components/layout/Landing';
 import Loading from './components/layout/Loading';
 import { useCards } from './hooks/useCards';
+import { AuthProvider } from './contexts/AuthContext';
 import type { ThemeMode } from './utils/theme';
 
 function App() {
@@ -28,11 +29,13 @@ function App() {
   }
 
   return (
-    <div className={`${theme.root} min-h-screen w-full p-4 sm:p-8`}>
-      <div className="mx-auto max-w-6xl">
-        <Landing theme={theme} mode={mode} onModeChange={setMode} allCards={cards} />
+    <AuthProvider>
+      <div className={`${theme.root} min-h-screen w-full p-4 sm:p-8`}>
+        <div className="mx-auto max-w-6xl">
+          <Landing theme={theme} mode={mode} onModeChange={setMode} allCards={cards} />
+        </div>
       </div>
-    </div>
+    </AuthProvider>
   );
 }
 

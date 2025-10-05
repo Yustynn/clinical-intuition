@@ -1,8 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import ModeToggle from './ModeToggle';
 import PredictionCard from '../../features/cards/PredictionCard';
 import AuthModal from '../../features/auth/AuthModal';
 import { getDeckCounts } from '../../constants';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+import { User } from 'lucide-react';
 import type { Theme, ThemeMode } from '../../utils/theme';
 import type { PredictionCard as PredictionCardType } from '../../types';
 
@@ -14,9 +17,11 @@ interface LandingProps {
 }
 
 const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards }) => {
+  const { user } = useAuth();
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   const onPlayed = () => {
     playsRef.current += 1;
@@ -25,6 +30,26 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards }
     //   setAuthOpen(true);
     // }
   };
+
+  // Fetch username when user changes
+  useEffect(() => {
+    if (!user) {
+      setUsername(null);
+      return;
+    }
+
+    const fetchUsername = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+
+      setUsername(data?.username || null);
+    };
+
+    fetchUsername();
+  }, [user]);
 
   const deckCounts = getDeckCounts(allCards);
   const allDecksOption = { deck: 'All', count: allCards.length };
@@ -40,7 +65,26 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards }
             See if you can predict which behavioral interventions worked and which didn't. Based on real trials!
           </p>
         </div>
-        <ModeToggle mode={mode} onModeChange={onModeChange} />
+        <div className="flex items-center gap-2">
+          {user ? (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className={`px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity`}
+              title={username || user.email || 'Account'}
+            >
+              <User className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{username || 'Account'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className={`px-3 py-1.5 ${theme.btnRadius} border ${theme.primaryBtn} text-xs font-medium transition-opacity`}
+            >
+              Sign up
+            </button>
+          )}
+          <ModeToggle mode={mode} onModeChange={onModeChange} />
+        </div>
       </header>
 
       {/* Deck filter */}
