@@ -262,38 +262,50 @@ describe('Stats Calculations', () => {
   });
 
   describe('Answer Validation', () => {
+    type Answer = 'Yes' | 'No';
+
+    const checkAnswer = (cardSuccess: boolean, userAnswer: Answer): boolean => {
+      return (cardSuccess && userAnswer === 'Yes') || (!cardSuccess && userAnswer === 'No');
+    };
+
     it('validates correct "Yes" answer', () => {
       const card = mockCards[0]; // success: true
-      const userAnswer = 'Yes';
-      const isCorrect = (card.success && userAnswer === 'Yes') || (!card.success && userAnswer === 'No');
+      const userAnswer: Answer = 'Yes';
+      const isCorrect = checkAnswer(card.success, userAnswer);
       expect(isCorrect).toBe(true);
     });
 
     it('validates incorrect "No" answer for success=true', () => {
       const card = mockCards[0]; // success: true
-      const userAnswer = 'No';
-      const isCorrect = (card.success && userAnswer === 'Yes') || (!card.success && userAnswer === 'No');
+      const userAnswer: Answer = 'No';
+      const isCorrect = checkAnswer(card.success, userAnswer);
       expect(isCorrect).toBe(false);
     });
 
     it('validates correct "No" answer for success=false', () => {
       const card = mockCards[1]; // success: false
-      const userAnswer = 'No';
-      const isCorrect = (card.success && userAnswer === 'Yes') || (!card.success && userAnswer === 'No');
+      const userAnswer: Answer = 'No';
+      const isCorrect = checkAnswer(card.success, userAnswer);
       expect(isCorrect).toBe(true);
     });
 
     it('validates incorrect "Yes" answer for success=false', () => {
       const card = mockCards[1]; // success: false
-      const userAnswer = 'Yes';
-      const isCorrect = (card.success && userAnswer === 'Yes') || (!card.success && userAnswer === 'No');
+      const userAnswer: Answer = 'Yes';
+      const isCorrect = checkAnswer(card.success, userAnswer);
       expect(isCorrect).toBe(false);
     });
   });
 
   describe('Deck Stats Aggregation', () => {
+    interface DeckStat {
+      totalCorrect: number;
+      totalWrong: number;
+      cardsPlayed: number;
+    }
+
     it('aggregates stats correctly for multiple decks', () => {
-      const deckStats = {
+      const deckStats: Record<string, DeckStat> = {
         'Deck A': { totalCorrect: 5, totalWrong: 3, cardsPlayed: 8 },
         'Deck B': { totalCorrect: 7, totalWrong: 2, cardsPlayed: 9 },
       };
@@ -313,7 +325,7 @@ describe('Stats Calculations', () => {
     });
 
     it('handles single deck correctly', () => {
-      const deckStats = {
+      const deckStats: Record<string, DeckStat> = {
         'Deck A': { totalCorrect: 5, totalWrong: 3, cardsPlayed: 8 },
       };
 
@@ -332,7 +344,7 @@ describe('Stats Calculations', () => {
     });
 
     it('handles empty stats correctly', () => {
-      const deckStats = {};
+      const deckStats: Record<string, DeckStat> = {};
 
       const overall = Object.values(deckStats).reduce(
         (acc, deck) => ({

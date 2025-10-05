@@ -92,7 +92,7 @@ describe('Card Filtering Logic', () => {
     it('filters cards by specific deck', () => {
       const filtered = getFilteredDeck(mockCards, 'Exercise');
       expect(filtered.length).toBe(2); // cards 1 and 2
-      expect(filtered.every(card => card.decks.includes('Exercise'))).toBe(true);
+      expect(filtered.every(card => card.decks?.includes('Exercise'))).toBe(true);
     });
 
     it('handles deck with single card', () => {
@@ -143,7 +143,7 @@ describe('Card Filtering Logic', () => {
 
     it('combines deck filtering with answered filtering', () => {
       const answeredCardIds = new Set(['1']);
-      const deckFiltered = mockCards.filter(card => card.decks.includes('Exercise'));
+      const deckFiltered = mockCards.filter(card => card.decks?.includes('Exercise'));
       const finalFiltered = deckFiltered.filter(card => !answeredCardIds.has(card.card_id));
 
       expect(finalFiltered.length).toBe(1); // Only card 2 (card 1 is answered)

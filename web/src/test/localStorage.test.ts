@@ -184,12 +184,12 @@ describe('LocalStorage Persistence', () => {
       const localStats = { totalCorrect: 5, totalWrong: 3, cardsPlayed: 8 };
       const supabaseStats = null;
 
-      const merged = supabaseStats && supabaseStats.cardsPlayed > localStats.cardsPlayed ? supabaseStats : localStats;
+      const merged = supabaseStats ? supabaseStats : localStats;
       expect(merged).toEqual(localStats);
+      expect(merged.cardsPlayed).toBe(8);
     });
 
     it('handles missing local data', () => {
-      const localStats = null;
       const supabaseStats = { totalCorrect: 5, totalWrong: 3, cardsPlayed: 8 };
 
       const merged = supabaseStats;
