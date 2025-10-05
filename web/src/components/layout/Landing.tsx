@@ -5,7 +5,7 @@ import AuthModal from '../../features/auth/AuthModal';
 import { getDeckCounts } from '../../constants';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { User } from 'lucide-react';
+import { User, BarChart3 } from 'lucide-react';
 import type { Theme, ThemeMode } from '../../utils/theme';
 import type { PredictionCard as PredictionCardType } from '../../types';
 
@@ -14,9 +14,10 @@ interface LandingProps {
   mode: ThemeMode;
   onModeChange: (mode: ThemeMode) => void;
   allCards: PredictionCardType[];
+  onNavigateToStats: () => void;
 }
 
-const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards }) => {
+const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, onNavigateToStats }) => {
   const { user } = useAuth();
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
@@ -66,6 +67,16 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards }
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {user && (
+            <button
+              onClick={onNavigateToStats}
+              className={`px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity`}
+              title="View Stats"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Stats</span>
+            </button>
+          )}
           {user ? (
             <button
               onClick={() => setAuthOpen(true)}
