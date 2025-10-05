@@ -46,7 +46,7 @@ function App() {
             />
           )}
           {currentPage === 'stats' && (
-            <Stats theme={theme} onBack={() => setCurrentPage('landing')} />
+            <Stats theme={theme} onBack={() => setCurrentPage('landing')} allCards={cards} />
           )}
         </div>
       </div>

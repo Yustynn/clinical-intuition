@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchDeckStats, fetchCardAnswers } from '../../lib/supabaseService';
+import { getDeckBaseRate } from '../../constants';
 import { ArrowLeft, TrendingUp, Target, Zap } from 'lucide-react';
 import type { Theme } from '../../utils/theme';
+import type { PredictionCard } from '../../types';
 
 interface StatsProps {
   theme: Theme;
   onBack: () => void;
+  allCards: PredictionCard[];
 }
 
 interface DeckStats {
@@ -23,11 +26,18 @@ interface CardAnswer {
   timestamp: string;
 }
 
-const Stats: React.FC<StatsProps> = ({ theme, onBack }) => {
+const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
   const { user } = useAuth();
   const [deckStats, setDeckStats] = useState<Record<string, DeckStats>>({});
   const [recentAnswers, setRecentAnswers] = useState<CardAnswer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Create card lookup map
+  const cardMap = useMemo(() => {
+    const map = new Map<string, PredictionCard>();
+    allCards.forEach(card => map.set(card.card_id, card));
+    return map;
+  }, [allCards]);
 
   useEffect(() => {
     if (!user) return;
@@ -179,14 +189,19 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack }) => {
                 const deckAccuracy = stats.cardsPlayed > 0
                   ? Math.round((stats.totalCorrect / stats.cardsPlayed) * 100)
                   : 0;
+                const baseline = getDeckBaseRate(allCards, deckName === 'All' ? null : deckName);
+                const diff = deckAccuracy - baseline;
 
                 return (
                   <div key={deckName} className={`p-3 ${theme.btnRadius} border border-amber-300`}>
                     <div className="flex justify-between items-center">
-                      <div>
+                      <div className="flex-1">
                         <div className="font-medium">{deckName}</div>
                         <div className="text-xs opacity-60">
                           {stats.cardsPlayed} cards · {stats.totalCorrect} correct
+                        </div>
+                        <div className="text-xs opacity-50 mt-0.5">
+                          Scientists: {baseline}% · You: {diff > 0 ? '+' : ''}{diff}%
                         </div>
                       </div>
                       <div className="text-2xl font-bold">{deckAccuracy}%</div>
@@ -206,19 +221,36 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack }) => {
             {recentAnswers.slice(0, 10).map((answer, idx) => {
               const date = new Date(answer.timestamp);
               const timeAgo = getTimeAgo(date);
+              const card = cardMap.get(answer.card_id);
+              const interventionName = card?.front_details?.intervention_fragment || 'Unknown intervention';
+              const decks = card?.decks || [];
 
               return (
-                <div key={idx} className="p-3 flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="text-sm opacity-70">{answer.deck_name}</div>
-                    <div className="text-xs opacity-50">{timeAgo}</div>
-                  </div>
-                  <div className={`px-2 py-1 ${theme.btnRadius} text-xs font-medium ${
-                    answer.correct
-                      ? 'bg-green-500/20 text-green-500'
-                      : 'bg-red-500/20 text-red-500'
-                  }`}>
-                    {answer.correct ? 'Correct' : 'Wrong'}
+                <div key={idx} className="p-3">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{interventionName}</div>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {decks.map((deck, i) => (
+                          <span
+                            key={i}
+                            className={`px-2 py-0.5 ${theme.btnRadius} text-xs bg-amber-100 text-amber-800 ${
+                              theme.key === 'retroDark' ? 'bg-amber-900/30 text-amber-400' : ''
+                            }`}
+                          >
+                            {deck}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-xs opacity-50 mt-1">{timeAgo}</div>
+                    </div>
+                    <div className={`px-2 py-1 ${theme.btnRadius} text-xs font-medium flex-shrink-0 ${
+                      answer.correct
+                        ? 'bg-green-500/20 text-green-500'
+                        : 'bg-red-500/20 text-red-500'
+                    }`}>
+                      {answer.correct ? 'Correct' : 'Wrong'}
+                    </div>
                   </div>
                 </div>
               );
