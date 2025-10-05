@@ -4,7 +4,7 @@ import { fetchDeckStats, fetchCardAnswers } from '../../lib/supabaseService';
 import { getDeckBaseRate } from '../../constants';
 import { Sheet } from '../../components/ui';
 import QuestionStyles from '../../components/ui/QuestionStyles';
-import { ArrowLeft, TrendingUp, Target, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Target, Zap, ExternalLink } from 'lucide-react';
 import type { Theme } from '../../utils/theme';
 import type { PredictionCard } from '../../types';
 
@@ -34,7 +34,6 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
   const [recentAnswers, setRecentAnswers] = useState<CardAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnswer, setSelectedAnswer] = useState<CardAnswer | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
 
   // Create card lookup map
   const cardMap = useMemo(() => {
@@ -279,19 +278,13 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
       {selectedAnswer && (
         <Sheet
           open={!!selectedAnswer}
-          onClose={() => {
-            setSelectedAnswer(null);
-            setShowDetails(false);
-          }}
+          onClose={() => setSelectedAnswer(null)}
           title="Card Review"
           theme={theme}
         >
           {(() => {
             const card = cardMap.get(selectedAnswer.card_id);
             if (!card) return <div>Card not found</div>;
-
-            const interventionName = card.front_details.intervention_fragment;
-            const capitalizedIntervention = interventionName.charAt(0).toUpperCase() + interventionName.slice(1);
 
             return (
               <div className="space-y-4">
@@ -342,65 +335,16 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
                   </div>
                 )}
 
-                {/* More Details Toggle */}
-                <button
-                  onClick={() => setShowDetails(!showDetails)}
-                  className={`inline-flex items-center gap-1 text-sm opacity-70 hover:opacity-100 transition-opacity`}
+                {/* Link to study */}
+                <a
+                  href={`https://clinicaltrials.gov/study/${card.study.nct_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs opacity-70 hover:opacity-100 transition-opacity`}
                 >
-                  {showDetails ? 'Hide Details' : 'More Details'}
-                  {showDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-
-                {/* Expandable Details */}
-                {showDetails && (
-                  <div className="space-y-3 pt-2 border-t border-amber-300">
-                    <div>
-                      <div className="font-medium text-sm">Study Title</div>
-                      <div className="opacity-80 text-sm">{card.study.title}</div>
-                    </div>
-
-                    {card.study.brief_description && (
-                      <div>
-                        <div className="font-medium text-sm">Study Description</div>
-                        <div className="opacity-80 text-sm leading-relaxed">{card.study.brief_description}</div>
-                      </div>
-                    )}
-
-                    <div>
-                      <div className="font-medium text-sm">Participants</div>
-                      <div className="opacity-80 text-sm">{card.front_details.intervention_group_fragment} (n={card.num_participants})</div>
-                    </div>
-
-                    <div>
-                      <div className="font-medium text-sm">Intervention & Comparator</div>
-                      <div className="opacity-80 text-sm">{capitalizedIntervention} vs {card.front_details.comparator_group_fragment}</div>
-                    </div>
-
-                    <div>
-                      <div className="font-medium text-sm">Statistical measure</div>
-                      <div className="opacity-80 text-sm">p-value = {card.p_value}, n={card.num_participants}</div>
-                    </div>
-
-                    <div>
-                      <div className="font-medium text-sm">Conditions</div>
-                      <div className="opacity-80 text-sm">{card.conditions.join(', ')}</div>
-                    </div>
-
-                    {card.keywords && card.keywords.length > 0 && (
-                      <div>
-                        <div className="font-medium text-sm">Keywords</div>
-                        <div className="opacity-80 text-sm">{card.keywords.join(', ')}</div>
-                      </div>
-                    )}
-
-                    <div className="pt-2 text-xs opacity-70">
-                      Source:{' '}
-                      <a className="underline" href={`https://clinicaltrials.gov/study/${card.study.nct_id}`} target="_blank" rel="noopener noreferrer">
-                        {card.study.nct_id}
-                      </a>
-                    </div>
-                  </div>
-                )}
+                  <ExternalLink className="h-3 w-3" />
+                  View on ClinicalTrials.gov
+                </a>
               </div>
             );
           })()}
