@@ -2,7 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchDeckStats, fetchCardAnswers } from '../../lib/supabaseService';
 import { getDeckBaseRate } from '../../constants';
-import { ArrowLeft, TrendingUp, Target, Zap } from 'lucide-react';
+import { Sheet } from '../../components/ui';
+import { ArrowLeft, TrendingUp, Target, Zap, ExternalLink } from 'lucide-react';
 import type { Theme } from '../../utils/theme';
 import type { PredictionCard } from '../../types';
 
@@ -10,7 +11,6 @@ interface StatsProps {
   theme: Theme;
   onBack: () => void;
   allCards: PredictionCard[];
-  onCardClick: (cardId: string) => void;
 }
 
 interface DeckStats {
@@ -27,11 +27,12 @@ interface CardAnswer {
   timestamp: string;
 }
 
-const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards, onCardClick }) => {
+const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
   const { user } = useAuth();
   const [deckStats, setDeckStats] = useState<Record<string, DeckStats>>({});
   const [recentAnswers, setRecentAnswers] = useState<CardAnswer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAnswer, setSelectedAnswer] = useState<CardAnswer | null>(null);
 
   // Create card lookup map
   const cardMap = useMemo(() => {
@@ -230,7 +231,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards, onCardClick }) =
               return (
                 <button
                   key={idx}
-                  onClick={() => onCardClick(answer.card_id)}
+                  onClick={() => setSelectedAnswer(answer)}
                   className="p-3 w-full text-left hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
                 >
                   <div className="flex justify-between items-start gap-3">
@@ -270,6 +271,96 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards, onCardClick }) =
         <div className={`p-8 ${theme.btnRadius} border border-amber-300 text-center`}>
           <p className="opacity-70">No stats yet. Start playing to see your progress!</p>
         </div>
+      )}
+
+      {/* Card Review Modal */}
+      {selectedAnswer && (
+        <Sheet
+          open={!!selectedAnswer}
+          onClose={() => setSelectedAnswer(null)}
+          title="Card Review"
+          theme={theme}
+        >
+          {(() => {
+            const card = cardMap.get(selectedAnswer.card_id);
+            if (!card) return <div>Card not found</div>;
+
+            const interventionName = card.front_details.intervention_fragment;
+            const capitalizedIntervention = interventionName.charAt(0).toUpperCase() + interventionName.slice(1);
+
+            return (
+              <div className="space-y-4">
+                {/* Question */}
+                <div>
+                  <div className="text-sm opacity-70 mb-1">Question</div>
+                  <div className="text-base">{card.front_details.question}</div>
+                </div>
+
+                {/* Your Answer */}
+                <div>
+                  <div className="text-sm opacity-70 mb-1">Your Answer</div>
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 ${theme.btnRadius} ${
+                    selectedAnswer.correct
+                      ? 'bg-green-500/20 text-green-600'
+                      : 'bg-red-500/20 text-red-600'
+                  }`}>
+                    <span className="font-medium">{selectedAnswer.answer}</span>
+                    <span className="text-xs">
+                      {selectedAnswer.correct ? '✓ Correct' : '✗ Wrong'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Correct Answer */}
+                <div>
+                  <div className="text-sm opacity-70 mb-1">Correct Answer</div>
+                  <div className="font-medium">{card.success ? 'Yes' : 'No'}</div>
+                </div>
+
+                {/* Study Details */}
+                <div>
+                  <div className="text-sm opacity-70 mb-1">Study Details</div>
+                  <div className="text-sm space-y-1">
+                    <div><span className="opacity-70">Intervention:</span> {capitalizedIntervention}</div>
+                    <div><span className="opacity-70">Outcome:</span> {card.front_details.outcome_fragment}</div>
+                    <div><span className="opacity-70">Participants:</span> {card.num_participants}</div>
+                    <div><span className="opacity-70">P-value:</span> {card.p_value}</div>
+                  </div>
+                </div>
+
+                {/* Decks */}
+                {card.decks && card.decks.length > 0 && (
+                  <div>
+                    <div className="text-sm opacity-70 mb-1">Categories</div>
+                    <div className="flex flex-wrap gap-1">
+                      {card.decks.map((deck, i) => (
+                        <span
+                          key={i}
+                          className={`px-2 py-0.5 ${theme.btnRadius} text-xs bg-amber-100 text-amber-800 ${
+                            theme.key === 'retroDark' ? 'bg-amber-900/30 text-amber-400' : ''
+                          }`}
+                        >
+                          {deck}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Link to study */}
+                <a
+                  href={`https://clinicaltrials.gov/study/${card.study.nct_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs hover:opacity-100 transition-opacity`}
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  View on ClinicalTrials.gov
+                </a>
+              </div>
+            );
+          })()}
+        </Sheet>
       )}
     </div>
   );
