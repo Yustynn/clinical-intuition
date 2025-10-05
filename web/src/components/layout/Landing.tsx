@@ -14,10 +14,11 @@ interface LandingProps {
   mode: ThemeMode;
   onModeChange: (mode: ThemeMode) => void;
   allCards: PredictionCardType[];
+  selectedCardId: string | null;
   onNavigateToStats: () => void;
 }
 
-const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, onNavigateToStats }) => {
+const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, selectedCardId, onNavigateToStats }) => {
   const { user } = useAuth();
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
@@ -129,7 +130,7 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
 
       {/* Card area */}
       <div className="w-full max-w-[420px]">
-        <PredictionCard theme={theme} allCards={allCards} selectedDeck={selectedDeck} onAnswered={onPlayed} />
+        <PredictionCard theme={theme} allCards={allCards} selectedDeck={selectedDeck} selectedCardId={selectedCardId} onAnswered={onPlayed} />
       </div>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} theme={theme} />

@@ -10,6 +10,7 @@ interface StatsProps {
   theme: Theme;
   onBack: () => void;
   allCards: PredictionCard[];
+  onCardClick: (cardId: string) => void;
 }
 
 interface DeckStats {
@@ -26,7 +27,7 @@ interface CardAnswer {
   timestamp: string;
 }
 
-const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
+const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards, onCardClick }) => {
   const { user } = useAuth();
   const [deckStats, setDeckStats] = useState<Record<string, DeckStats>>({});
   const [recentAnswers, setRecentAnswers] = useState<CardAnswer[]>([]);
@@ -223,13 +224,18 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
               const timeAgo = getTimeAgo(date);
               const card = cardMap.get(answer.card_id);
               const interventionName = card?.front_details?.intervention_fragment || 'Unknown intervention';
+              const capitalizedIntervention = interventionName.charAt(0).toUpperCase() + interventionName.slice(1);
               const decks = card?.decks || [];
 
               return (
-                <div key={idx} className="p-3">
+                <button
+                  key={idx}
+                  onClick={() => onCardClick(answer.card_id)}
+                  className="p-3 w-full text-left hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
+                >
                   <div className="flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{interventionName}</div>
+                      <div className="text-sm font-medium truncate">{capitalizedIntervention}</div>
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {decks.map((deck, i) => (
                           <span
@@ -252,7 +258,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
                       {answer.correct ? 'Correct' : 'Wrong'}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

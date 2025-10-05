@@ -13,12 +13,13 @@ interface PredictionCardProps {
   theme: Theme;
   allCards: PredictionCardType[];
   selectedDeck?: string | null;
+  selectedCardId?: string | null;
   onAnswered?: () => void;
   onNext?: () => void;
 }
 
-const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, selectedDeck = null, onAnswered, onNext }) => {
-  const { state, setState, sample, answer, next, share, addTrail } = useCardDemo(allCards, selectedDeck);
+const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, selectedDeck = null, selectedCardId = null, onAnswered, onNext }) => {
+  const { state, setState, sample, answer, next, share, addTrail } = useCardDemo(allCards, selectedDeck, selectedCardId);
 
   const baseRate = getDeckBaseRate(allCards, selectedDeck);
   const playerAccuracy = state.cardsPlayed > 0

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { getTheme } from './utils/theme';
 import Landing from './components/layout/Landing';
 import Stats from './components/pages/Stats';
@@ -12,8 +12,44 @@ type Page = 'landing' | 'stats';
 function App() {
   const [mode, setMode] = useState<ThemeMode>('light');
   const [currentPage, setCurrentPage] = useState<Page>('landing');
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const theme = useMemo(() => getTheme(mode), [mode]);
   const { cards, loading, error } = useCards();
+
+  // Handle URL changes (hash-based routing)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/card/')) {
+        const cardId = hash.replace('#/card/', '');
+        setSelectedCardId(cardId);
+        setCurrentPage('landing');
+      } else if (hash === '#/stats') {
+        setCurrentPage('stats');
+      } else {
+        setCurrentPage('landing');
+      }
+    };
+
+    // Handle initial load
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateToCard = (cardId: string) => {
+    window.location.hash = `/card/${cardId}`;
+  };
+
+  const navigateToStats = () => {
+    window.location.hash = '/stats';
+  };
+
+  const navigateToLanding = () => {
+    window.location.hash = '';
+  };
 
   if (loading) {
     return <Loading theme={theme} />;
@@ -42,11 +78,17 @@ function App() {
               mode={mode}
               onModeChange={setMode}
               allCards={cards}
-              onNavigateToStats={() => setCurrentPage('stats')}
+              selectedCardId={selectedCardId}
+              onNavigateToStats={navigateToStats}
             />
           )}
           {currentPage === 'stats' && (
-            <Stats theme={theme} onBack={() => setCurrentPage('landing')} allCards={cards} />
+            <Stats
+              theme={theme}
+              onBack={navigateToLanding}
+              allCards={cards}
+              onCardClick={navigateToCard}
+            />
           )}
         </div>
       </div>

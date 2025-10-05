@@ -115,7 +115,7 @@ interface CardDemoState {
   answeredCardIds: Set<string>;
 }
 
-export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | null = null) {
+export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | null = null, selectedCardId: string | null = null) {
   const { user } = useAuth();
   const { syncedStats, syncedAnsweredCardIds } = useSyncStats(); // Sync stats when user signs in
   const deckKey = selectedDeck || 'All';
@@ -133,8 +133,17 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
     const filteredDeck = baseDeck.filter(card => !answeredCardIds.has(card.card_id));
 
+    // If a specific card is selected, find its index
+    let initialIdx = 0;
+    if (selectedCardId) {
+      const cardIdx = baseDeck.findIndex(card => card.card_id === selectedCardId);
+      if (cardIdx !== -1) {
+        initialIdx = cardIdx;
+      }
+    }
+
     return {
-      idx: 0,
+      idx: initialIdx,
       phase: 'question',
       guess: null,
       correct: null,
