@@ -16,7 +16,7 @@ const Sheet: React.FC<SheetProps> = ({ open, onClose, title, children, theme }) 
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center"
+          className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -27,15 +27,15 @@ const Sheet: React.FC<SheetProps> = ({ open, onClose, title, children, theme }) 
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-            className={`relative z-10 w-full sm:w-[560px] max-w-[95vw] ${theme.radius} p-5 ${theme.card}`}
+            className={`relative z-10 w-full sm:w-[560px] max-h-[90vh] sm:max-h-[85vh] flex flex-col ${theme.radius} ${theme.card}`}
           >
-            <div className="flex items-center justify-between pb-2">
+            <div className="flex items-center justify-between p-5 pb-3 flex-shrink-0">
               <h3 className="text-lg font-semibold">{title}</h3>
-              <button onClick={onClose} className="p-2 hover:bg-white/5">
+              <button onClick={onClose} className="p-2 hover:bg-white/5 -mr-2">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="text-sm opacity-90 space-y-3">{children}</div>
+            <div className="text-sm opacity-90 space-y-3 px-5 pb-5 overflow-y-auto">{children}</div>
           </motion.div>
         </motion.div>
       )}
