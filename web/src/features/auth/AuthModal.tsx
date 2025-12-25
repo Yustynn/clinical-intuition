@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sheet, Button } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
-import { updateUsername, isUsernameAvailable } from '../../lib/supabaseService';
+import { updateUsername, isUsernameAvailable, deleteAllUserProgress } from '../../lib/supabaseService';
 import { supabase } from '../../lib/supabase';
 import { STORAGE_KEYS } from '../../constants';
 import type { Theme } from '../../utils/theme';
@@ -143,19 +143,47 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
     setPendingAuth(null);
   };
 
-  const handleResetConfirm = () => {
+  const handleResetConfirm = async () => {
     if (resetConfirmText.toUpperCase() !== 'RESET') {
       setError('Please type RESET to confirm');
       return;
     }
 
-    clearAllProgress();
-    setShowResetDialog(false);
-    setResetConfirmText('');
-    setError(null);
+    setLoading(true);
 
-    // Reload the page to refresh state
-    window.location.reload();
+    try {
+      // If user is signed in, delete from Supabase first
+      if (user) {
+        console.log('🗑️ Resetting progress for authenticated user...');
+        await deleteAllUserProgress(user.id);
+        console.log('✅ Database wiped, now clearing localStorage...');
+      }
+
+      // Clear localStorage
+      clearAllProgress();
+      console.log('✅ localStorage cleared');
+
+      // Set a flag to prevent sync on next page load
+      // This ensures we start completely fresh
+      localStorage.setItem('SKIP_NEXT_SYNC', 'true');
+
+      setShowResetDialog(false);
+      setResetConfirmText('');
+      setError(null);
+
+      // Wait a bit to ensure all operations complete before reloading
+      // This prevents race conditions where sync happens before deletion completes
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      console.log('🔄 Reloading page with fresh state...');
+
+      // Reload with cache busting to ensure clean slate
+      window.location.href = window.location.href.split('?')[0] + '?t=' + Date.now();
+    } catch (err) {
+      console.error('Error resetting progress:', err);
+      setError('Failed to reset progress. Please try again.');
+      setLoading(false);
+    }
   };
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
@@ -331,9 +359,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
               theme={theme}
               className="flex-1 justify-center"
               onClick={handleResetConfirm}
-              disabled={resetConfirmText.toUpperCase() !== 'RESET'}
+              disabled={resetConfirmText.toUpperCase() !== 'RESET' || loading}
             >
-              Reset Progress
+              {loading ? 'Resetting...' : 'Reset Progress'}
             </Button>
           </div>
         </div>

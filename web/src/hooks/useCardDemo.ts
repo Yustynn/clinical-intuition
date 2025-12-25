@@ -287,12 +287,24 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
 
       // Save to Supabase if user is signed in (async, don't block UI)
       if (user) {
+        console.log('🔵 User authenticated, saving to Supabase:', {
+          userId: user.id,
+          email: user.email,
+          deck: s.currentDeckKey,
+          cardId: sample.card_id,
+        });
+
         const deckStats = updatedDeckStats[s.currentDeckKey];
 
         // Save deck stats
-        upsertDeckStats(user.id, s.currentDeckKey, deckStats).catch((err) => {
-          console.error('Failed to sync deck stats to Supabase:', err);
-        });
+        upsertDeckStats(user.id, s.currentDeckKey, deckStats)
+          .then(() => {
+            console.log('✅ Deck stats saved successfully to Supabase');
+          })
+          .catch((err) => {
+            console.error('❌ Failed to sync deck stats to Supabase:', err);
+            console.error('Full error details:', JSON.stringify(err, null, 2));
+          });
 
         // Save individual card answer
         saveCardAnswer(user.id, {
@@ -300,9 +312,16 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
           deck_name: s.currentDeckKey,
           answer: choice,
           correct: isCorrect,
-        }).catch((err) => {
-          console.error('Failed to save card answer to Supabase:', err);
-        });
+        })
+          .then(() => {
+            console.log('✅ Card answer saved successfully to Supabase');
+          })
+          .catch((err) => {
+            console.error('❌ Failed to save card answer to Supabase:', err);
+            console.error('Full error details:', JSON.stringify(err, null, 2));
+          });
+      } else {
+        console.log('⚪ User not authenticated, saving only to localStorage');
       }
 
       return {

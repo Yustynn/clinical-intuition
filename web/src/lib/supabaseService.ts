@@ -7,9 +7,53 @@ export interface DeckStats {
 }
 
 /**
+ * Ensure user exists in users table
+ * This handles cases where auth.users has the record but public.users doesn't
+ */
+export async function ensureUserExists(userId: string, email?: string) {
+  // Check if user already exists
+  const { data: existingUser, error: checkError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (checkError) {
+    console.error('Error checking if user exists:', checkError);
+    throw checkError;
+  }
+
+  // If user exists, we're good
+  if (existingUser) {
+    return;
+  }
+
+  // User doesn't exist, create them
+  console.log('🔧 User record missing, creating entry in users table for:', userId);
+
+  const { error: insertError } = await supabase
+    .from('users')
+    .insert({
+      id: userId,
+      email: email || null,
+      created_at: new Date().toISOString(),
+    });
+
+  if (insertError) {
+    console.error('❌ Failed to create user record:', insertError);
+    throw insertError;
+  }
+
+  console.log('✅ User record created successfully');
+}
+
+/**
  * Update user's username
  */
 export async function updateUsername(userId: string, username: string) {
+  // Ensure user exists first
+  await ensureUserExists(userId);
+
   const { error } = await supabase
     .from('users')
     .update({ username })
@@ -54,6 +98,9 @@ export async function upsertDeckStats(
   deckName: string,
   stats: DeckStats
 ) {
+  // Ensure user exists first to avoid foreign key constraint errors
+  await ensureUserExists(userId);
+
   const { error } = await supabase
     .from('deck_stats')
     .upsert({
@@ -80,6 +127,9 @@ export async function saveCardAnswer(
   userId: string,
   answer: CardAnswer
 ) {
+  // Ensure user exists first to avoid foreign key constraint errors
+  await ensureUserExists(userId);
+
   const { error } = await supabase
     .from('card_answers')
     .insert({
@@ -104,12 +154,15 @@ export async function fetchDeckStats(userId: string): Promise<Record<string, Dec
   const { data, error } = await supabase
     .from('deck_stats')
     .select('*')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching deck stats:', error);
     throw error;
   }
+
+  console.log('📊 Fetched deck stats from Supabase:', data?.length || 0, 'records');
 
   // Convert array to Record
   const statsRecord: Record<string, DeckStats> = {};
@@ -152,5 +205,71 @@ export async function fetchCardAnswers(
     throw error;
   }
 
+  console.log('📝 Fetched card answers from Supabase:', data?.length || 0, 'records');
+
   return data;
+}
+
+/**
+ * Delete all progress for a user (deck stats and card answers)
+ */
+export async function deleteAllUserProgress(userId: string) {
+  console.log('🗑️ Deleting all progress from Supabase for user:', userId);
+
+  // First, check what we're about to delete
+  const { count: deckCount } = await supabase
+    .from('deck_stats')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  const { count: answerCount } = await supabase
+    .from('card_answers')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  console.log(`📊 Found ${deckCount || 0} deck stats and ${answerCount || 0} card answers to delete`);
+
+  // Delete all deck stats
+  const { error: deckStatsError, count: deletedDeckCount } = await supabase
+    .from('deck_stats')
+    .delete({ count: 'exact' })
+    .eq('user_id', userId);
+
+  if (deckStatsError) {
+    console.error('❌ Error deleting deck stats:', deckStatsError);
+    throw deckStatsError;
+  }
+
+  console.log(`✅ Deleted ${deletedDeckCount || 0} deck stats records`);
+
+  // Delete all card answers
+  const { error: cardAnswersError, count: deletedAnswerCount } = await supabase
+    .from('card_answers')
+    .delete({ count: 'exact' })
+    .eq('user_id', userId);
+
+  if (cardAnswersError) {
+    console.error('❌ Error deleting card answers:', cardAnswersError);
+    throw cardAnswersError;
+  }
+
+  console.log(`✅ Deleted ${deletedAnswerCount || 0} card answers records`);
+
+  // Verify deletion
+  const { count: remainingDeckCount } = await supabase
+    .from('deck_stats')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  const { count: remainingAnswerCount } = await supabase
+    .from('card_answers')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if ((remainingDeckCount || 0) > 0 || (remainingAnswerCount || 0) > 0) {
+    console.error(`⚠️ WARNING: Deletion incomplete! Remaining: ${remainingDeckCount || 0} deck stats, ${remainingAnswerCount || 0} answers`);
+    throw new Error('Deletion verification failed - some records remain');
+  }
+
+  console.log('✅ Verified: All data successfully deleted (0 records remaining)');
 }

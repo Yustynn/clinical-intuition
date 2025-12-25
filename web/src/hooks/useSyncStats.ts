@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
-import { fetchDeckStats, upsertDeckStats, saveCardAnswer, fetchCardAnswers, type DeckStats } from '../lib/supabaseService';
+import { fetchDeckStats, upsertDeckStats, saveCardAnswer, fetchCardAnswers, ensureUserExists, type DeckStats } from '../lib/supabaseService';
 import { STORAGE_KEYS } from '../constants';
 
 /**
@@ -18,9 +18,21 @@ export function useSyncStats() {
   useEffect(() => {
     if (!user || synced) return;
 
+    // Check if we should skip sync (after a reset)
+    const skipSync = localStorage.getItem('SKIP_NEXT_SYNC');
+    if (skipSync === 'true') {
+      console.log('⏭️ Skipping sync after reset');
+      localStorage.removeItem('SKIP_NEXT_SYNC');
+      setSynced(true); // Mark as synced to prevent future attempts
+      return;
+    }
+
     const syncStats = async () => {
       setSyncing(true);
       try {
+        // Ensure user record exists in users table before syncing
+        await ensureUserExists(user.id, user.email || undefined);
+
         // Load localStorage stats
         const localStatsStr = localStorage.getItem(STORAGE_KEYS.DECK_STATS);
         const localStats: Record<string, DeckStats> = localStatsStr
