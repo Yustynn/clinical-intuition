@@ -24,7 +24,25 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [selectedDeck, setSelectedDeck] = useState<string | null>('Depression');
+
+  // Check if there's a shared card in the URL and auto-select its deck
+  const getInitialDeck = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedCardId = urlParams.get('card');
+
+    if (sharedCardId) {
+      // Find which deck contains this card
+      const card = allCards.find(c => c.card_id === sharedCardId);
+      if (card && card.decks && card.decks.length > 0) {
+        console.log('🎯 Shared card found, auto-selecting deck:', card.decks[0]);
+        return card.decks[0];
+      }
+    }
+
+    return 'Depression'; // Default deck
+  };
+
+  const [selectedDeck, setSelectedDeck] = useState<string | null>(getInitialDeck);
   const [username, setUsername] = useState<string | null>(null);
 
   const onPlayed = () => {

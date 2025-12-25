@@ -120,6 +120,9 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
   const { syncedStats, syncedAnsweredCardIds } = useSyncStats(); // Sync stats when user signs in
   const deckKey = selectedDeck || 'All';
 
+  // Store shared card ID in ref so it persists even after URL cleanup
+  const sharedCardIdRef = useRef<string | null>(null);
+
   const [state, setState] = useState<CardDemoState>(() => {
     const savedStats = loadDeckStats();
     const currentStats = savedStats[deckKey] || {
@@ -132,9 +135,40 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     // Filter deck to exclude answered cards
     const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
     const filteredDeck = baseDeck.filter(card => !answeredCardIds.has(card.card_id));
+    const finalDeck = filteredDeck.length > 0 ? filteredDeck : baseDeck;
+
+    // Check if there's a card ID in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedCardId = urlParams.get('card');
+    let initialIdx = 0;
+
+    // Store shared card ID in ref for later use
+    if (sharedCardId) {
+      sharedCardIdRef.current = sharedCardId;
+    }
+
+    console.log('🔍 Initializing deck:', {
+      url: window.location.href,
+      search: window.location.search,
+      sharedCardId,
+      deckSize: finalDeck.length,
+      selectedDeck: selectedDeck || 'All',
+    });
+
+    if (sharedCardId) {
+      // Find the card in the deck
+      const cardIndex = finalDeck.findIndex(card => card.card_id === sharedCardId);
+      if (cardIndex !== -1) {
+        initialIdx = cardIndex;
+        console.log('✅ Found shared card:', sharedCardId, 'at index', cardIndex);
+      } else {
+        console.log('❌ Shared card NOT found in deck:', sharedCardId);
+        console.log('Available cards:', finalDeck.map(c => c.card_id).slice(0, 10));
+      }
+    }
 
     return {
-      idx: 0,
+      idx: initialIdx,
       phase: 'question',
       guess: null,
       correct: null,
@@ -150,7 +184,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
       totalCorrect: currentStats.totalCorrect,
       totalWrong: currentStats.totalWrong,
       cardsPlayed: currentStats.cardsPlayed,
-      deck: filteredDeck.length > 0 ? filteredDeck : baseDeck,
+      deck: finalDeck,
       deckStats: savedStats,
       currentDeckKey: deckKey,
       answeredCardIds,
@@ -175,6 +209,20 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         // Filter deck to exclude answered cards
         const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
         const filteredDeck = baseDeck.filter(card => !mergedAnsweredCardIds.has(card.card_id));
+        const newDeck = filteredDeck.length > 0 ? filteredDeck : baseDeck;
+
+        // Preserve current card if possible
+        const currentCard = s.deck[s.idx];
+        let newIdx = 0;
+        if (currentCard) {
+          const foundIdx = newDeck.findIndex(card => card.card_id === currentCard.card_id);
+          if (foundIdx !== -1) {
+            newIdx = foundIdx;
+            console.log('🔄 Sync: Preserving current card at new index', foundIdx);
+          } else {
+            console.log('⚠️ Sync: Current card not in new deck, resetting to 0');
+          }
+        }
 
         // Save synced answered card IDs to localStorage
         if (syncedAnsweredCardIds.size > 0) {
@@ -183,13 +231,13 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
 
         return {
           ...s,
-          deck: filteredDeck.length > 0 ? filteredDeck : baseDeck,
+          deck: newDeck,
           deckStats: syncedStats,
           answeredCardIds: mergedAnsweredCardIds,
           totalCorrect: stats.totalCorrect,
           totalWrong: stats.totalWrong,
           cardsPlayed: stats.cardsPlayed,
-          idx: 0,
+          idx: newIdx,
           phase: 'question',
           guess: null,
           correct: null,
@@ -204,6 +252,16 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
     const filteredDeck = baseDeck.filter(card => !state.answeredCardIds.has(card.card_id));
 
+    // Use ref instead of URL (persists after cleanup)
+    const sharedCardId = sharedCardIdRef.current;
+
+    console.log('🔄 Deck change effect:', {
+      oldDeck: state.currentDeckKey,
+      newDeck: newDeckKey,
+      currentIdx: state.idx,
+      sharedCardId,
+    });
+
     setState((s) => {
       // Get stats for this deck, or initialize if not present
       const stats = s.deckStats[newDeckKey] || {
@@ -212,11 +270,37 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         cardsPlayed: 0,
       };
 
+      const newDeck = filteredDeck.length > 0 ? filteredDeck : baseDeck;
+      let newIdx = 0;
+
+      // If there's a shared card, preserve it instead of resetting to 0
+      if (sharedCardId) {
+        const cardIndex = newDeck.findIndex(card => card.card_id === sharedCardId);
+        if (cardIndex !== -1) {
+          newIdx = cardIndex;
+          console.log('✅ Deck change: Preserving shared card at index', cardIndex);
+        } else {
+          console.log('⚠️ Deck change: Shared card not found, resetting to 0');
+        }
+      } else if (s.currentDeckKey === newDeckKey) {
+        // Same deck, preserve current card
+        const currentCard = s.deck[s.idx];
+        if (currentCard) {
+          const foundIdx = newDeck.findIndex(card => card.card_id === currentCard.card_id);
+          if (foundIdx !== -1) {
+            newIdx = foundIdx;
+            console.log('✅ Deck change: Preserving current card at index', foundIdx);
+          }
+        }
+      } else {
+        console.log('🔄 Deck change: New deck selected, resetting to 0');
+      }
+
       return {
         ...s,
-        deck: filteredDeck.length > 0 ? filteredDeck : baseDeck,
+        deck: newDeck,
         currentDeckKey: newDeckKey,
-        idx: 0,
+        idx: newIdx,
         phase: 'question',
         guess: null,
         correct: null,
@@ -242,6 +326,16 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
   useEffect(() => {
     cardStartTimeRef.current = Date.now();
   }, [state.idx, state.phase]);
+
+  // Clean up URL after loading shared card
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('card')) {
+      // Remove the card parameter from URL without reloading
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   const answer = async (choice: 'Yes' | 'No') => {
     const answerId = Math.random().toString(36).substring(7);

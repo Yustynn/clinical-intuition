@@ -337,24 +337,36 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
       <Sheet
         open={state.openShare}
         onClose={() => setState((s) => ({ ...s, openShare: false }))}
-        title="Challenge a friend"
+        title="Share this card"
         theme={theme}
       >
-        {/* Under Construction Banner */}
-        <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded text-amber-800 text-sm">
-          🚧 <strong>Under Construction</strong> - Sharing features coming soon!
-        </div>
-        
-        <div className="grid gap-3 opacity-50">
-          <Button onClick={() => share('card')} theme={theme} className="w-full justify-start" disabled>
-            Share **this card**
-          </Button>
-          <Button onClick={() => share('stack')} variant="secondary" theme={theme} className="w-full justify-start" disabled>
-            Share a **3-card stack**
-          </Button>
-          <Button onClick={() => share('image')} variant="secondary" theme={theme} className="w-full justify-start" disabled>
-            Share as **image**
-          </Button>
+        <div className="grid gap-4">
+          <div>
+            <div className="text-sm opacity-70 mb-2">Share this specific card:</div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={`${window.location.origin}${window.location.pathname}?card=${sample.card_id}`}
+                className={`flex-1 h-10 px-3 ${theme.btnRadius} border border-amber-300 bg-amber-50 dark:bg-amber-950/30 text-sm font-mono`}
+                onClick={(e) => e.currentTarget.select()}
+              />
+              <Button
+                theme={theme}
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?card=${sample.card_id}`;
+                  navigator.clipboard.writeText(url);
+                  share('card');
+                }}
+                className="px-4"
+              >
+                Copy
+              </Button>
+            </div>
+            <div className="text-xs opacity-60 mt-2">
+              Your friend will see this exact card and can try to predict the outcome!
+            </div>
+          </div>
         </div>
       </Sheet>
 
