@@ -62,7 +62,7 @@ function saveCardAnswerToLocal(answer: {
 }
 
 // Load answered card IDs from localStorage
-function loadAnsweredCardIds(): Set<string> {
+export function loadAnsweredCardIds(): Set<string> {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.ANSWERED_CARD_IDS);
     return stored ? new Set(JSON.parse(stored)) : new Set();

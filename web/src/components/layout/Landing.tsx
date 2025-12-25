@@ -5,6 +5,8 @@ import AuthModal from '../../features/auth/AuthModal';
 import { Sheet } from '../../components/ui';
 import { getDeckCounts } from '../../constants';
 import { useAuth } from '../../hooks/useAuth';
+import { useSyncStats } from '../../hooks/useSyncStats';
+import { loadAnsweredCardIds } from '../../hooks/useCardDemo';
 import { supabase } from '../../lib/supabase';
 import { trackButtonClick, trackDeckSwitch } from '../../utils/analytics';
 import { User, BarChart3 } from 'lucide-react';
@@ -21,6 +23,7 @@ interface LandingProps {
 
 const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, onNavigateToStats }) => {
   const { user } = useAuth();
+  const { syncedAnsweredCardIds } = useSyncStats();
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -43,6 +46,11 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
 
   const [selectedDeck, setSelectedDeck] = useState<string | null>(getInitialDeck);
   const [username, setUsername] = useState<string | null>(null);
+
+  // Get answered card IDs (use synced if available, otherwise localStorage)
+  const answeredCardIds = syncedAnsweredCardIds.size > 0
+    ? syncedAnsweredCardIds
+    : loadAnsweredCardIds();
 
   const onPlayed = () => {
     playsRef.current += 1;
@@ -73,6 +81,17 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
   }, [user]);
 
   const deckCounts = getDeckCounts(allCards);
+
+  // Calculate progress for each deck
+  const getDeckProgress = (deckName: string) => {
+    const deckCards = allCards.filter(card => card.decks?.includes(deckName));
+    const answeredInDeck = deckCards.filter(card => answeredCardIds.has(card.card_id)).length;
+    return {
+      answered: answeredInDeck,
+      total: deckCards.length,
+      isComplete: answeredInDeck === deckCards.length && deckCards.length > 0,
+    };
+  };
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -140,21 +159,27 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
         {/* Deck filter */}
         <div className="w-full lg:w-64 lg:flex-shrink-0">
           <div className="flex flex-wrap lg:flex-col gap-2 text-sm">
-            {deckCounts.map(({ deck, count }) => (
-              <button
-                key={deck}
-                onClick={() => {
-                  trackDeckSwitch(selectedDeck, deck, count);
-                  setSelectedDeck(deck);
-                }}
-                className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${selectedDeck === deck
-                  ? `${theme.primaryBtn} font-medium`
-                  : `${theme.secondaryBtn} opacity-70 hover:opacity-100`
-                  }`}
-              >
-                {deck} ({count})
-              </button>
-            ))}
+            {deckCounts.map(({ deck, count }) => {
+              const progress = getDeckProgress(deck);
+              const isComplete = progress.isComplete;
+
+              return (
+                <button
+                  key={deck}
+                  onClick={() => {
+                    trackDeckSwitch(selectedDeck, deck, count);
+                    setSelectedDeck(deck);
+                  }}
+                  className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${selectedDeck === deck
+                    ? `${theme.primaryBtn} font-medium`
+                    : `${theme.secondaryBtn} ${isComplete ? 'opacity-40' : 'opacity-70 hover:opacity-100'}`
+                    }`}
+                >
+                  {deck} ({progress.answered}/{count})
+                  {isComplete && ' ✓'}
+                </button>
+              );
+            })}
           </div>
         </div>
 

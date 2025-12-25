@@ -575,6 +575,11 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
           {deckCounts.map(({ deck, count }) => {
             const isCurrentDeck = deck === selectedDeck;
 
+            // Calculate progress for this deck
+            const deckCards = allCards.filter(card => card.decks?.includes(deck));
+            const answeredInDeck = deckCards.filter(card => state.answeredCardIds.has(card.card_id)).length;
+            const isComplete = answeredInDeck === deckCards.length && deckCards.length > 0;
+
             return (
               <button
                 key={deck}
@@ -585,13 +590,18 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
                 className={`w-full p-4 ${theme.btnRadius} border transition-all text-left ${
                   isCurrentDeck
                     ? `${theme.primaryBtn} font-semibold`
-                    : `border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20`
+                    : `border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20 ${isComplete ? 'opacity-50' : ''}`
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold">{deck}</div>
-                    <div className="text-sm opacity-70">{count} cards</div>
+                    <div className="font-semibold">
+                      {deck}
+                      {isComplete && ' ✓'}
+                    </div>
+                    <div className="text-sm opacity-70">
+                      {answeredInDeck}/{count} cards
+                    </div>
                   </div>
                 </div>
               </button>
