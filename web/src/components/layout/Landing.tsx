@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import ModeToggle from './ModeToggle';
 import PredictionCard from '../../features/cards/PredictionCard';
 import AuthModal from '../../features/auth/AuthModal';
+import { Sheet } from '../../components/ui';
 import { getDeckCounts } from '../../constants';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -21,6 +22,7 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
   const { user } = useAuth();
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<string | null>('Depression');
   const [username, setUsername] = useState<string | null>(null);
 
@@ -63,7 +65,13 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
             Can you beat scientists' intuitions?
           </h1>
           <p className={`opacity-70 mt-1 ${theme.font}`}>
-            See if you can predict which behavioral interventions worked and which didn't. Based on real trials!
+            See if you can predict which behavioral interventions worked and which didn't. Based on real trials!{' '}
+            <button
+              onClick={() => setInfoOpen(true)}
+              className="underline underline-offset-2 hover:opacity-100"
+            >
+              More info
+            </button>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -121,6 +129,83 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
       <div className="w-full max-w-[420px]">
         <PredictionCard theme={theme} allCards={allCards} selectedDeck={selectedDeck} onAnswered={onPlayed} />
       </div>
+
+      {/* Info sheet */}
+      <Sheet open={infoOpen} onClose={() => setInfoOpen(false)} title="More info" theme={theme}>
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Why bother with this?</h4>
+            <p className="leading-relaxed">
+              Here's the thing—even experts are pretty bad at predicting what works in psychology and medicine.
+              There was this big study where psychologists tried to replicate 100 experiments. They predicted 85% would work.
+              Actual success rate? 39%. Yikes.
+            </p>
+            <p className="leading-relaxed mt-2">
+              I think most of us walk around with overconfident intuitions about what "should" work. Meditation apps,
+              therapy techniques, lifestyle interventions—we assume the science backs them up more than it does.
+            </p>
+            <p className="leading-relaxed mt-2">
+              Playing these cards is a way to recalibrate. You start noticing patterns. Which conditions have treatments
+              that actually work? Where do you keep getting surprised? It's weirdly humbling and kinda fun.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-2">Where do these come from?</h4>
+            <p className="leading-relaxed">
+              Real trials from ClinicalTrials.gov (the official US government database). I filtered for:
+            </p>
+            <ul className="list-disc list-inside opacity-90 mt-2 space-y-1">
+              <li>Completed studies with published results</li>
+              <li>Studies that reported a p-value</li>
+              <li>Mostly behavioral interventions (not drugs or devices for now)</li>
+            </ul>
+            <p className="leading-relaxed mt-2">
+              Then I used an LLM to turn the dense medical jargon into readable questions. About 448 cards made the cut.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-2">What counts as "success"?</h4>
+            <p className="leading-relaxed">
+              Simple: if the p-value is under 0.05, that's a "yes" (the intervention worked). If it's 0.05 or higher,
+              that's a "no" (no significant effect found).
+            </p>
+            <p className="leading-relaxed mt-2">
+              Is this perfect? Nah. P-values have issues. But it's the standard bar scientists use, so I'm using it too.
+            </p>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <h4 className="font-medium mb-2">Help me out? 🙏</h4>
+            <p className="leading-relaxed">
+              I'm collecting data on predictions. If enough people play, I might find interesting stuff like:
+            </p>
+            <ul className="list-disc list-inside opacity-90 mt-2 space-y-1">
+              <li>Are depression interventions more predictable than anxiety ones?</li>
+              <li>Do people get better at this over time?</li>
+              <li>What trips everyone up?</li>
+            </ul>
+            <p className="leading-relaxed mt-2">
+              If I see cool patterns, I'll share them.
+            </p>
+            <p className="leading-relaxed mt-2 font-medium">
+              So if you're into it: try the Depression deck (it's the biggest), get friends to sign up and play too,
+              and just keep going—more data = more interesting findings.
+            </p>
+            <p className="leading-relaxed mt-2 opacity-70">
+              No pressure though. Have fun with it.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-2">Still curious?</h4>
+            <p className="leading-relaxed">
+              Each card has a "Details" button with the full study info + link to ClinicalTrials.gov if you want to dig deeper.
+            </p>
+          </div>
+        </div>
+      </Sheet>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} theme={theme} />
     </div>
