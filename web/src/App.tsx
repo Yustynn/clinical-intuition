@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { getTheme } from './utils/theme';
+import { trackPageView } from './utils/analytics';
 import Landing from './components/layout/Landing';
 import Stats from './components/pages/Stats';
 import Loading from './components/layout/Loading';
@@ -14,6 +15,11 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const theme = useMemo(() => getTheme(mode), [mode]);
   const { cards, loading, error } = useCards();
+
+  // Track page views when page changes
+  useEffect(() => {
+    trackPageView(currentPage, currentPage === 'landing' ? 'Clinical Intuition' : 'Your Stats');
+  }, [currentPage]);
 
   if (loading) {
     return <Loading theme={theme} />;

@@ -6,6 +6,7 @@ import { GradientFlash, ScorePop, EmojiBurst, ParticleTrail } from '../../compon
 import QuestionStyles from '../../components/ui/QuestionStyles';
 import { useCardDemo } from '../../hooks/useCardDemo';
 import { getDeckBaseRate } from '../../constants';
+import { trackModalOpen, trackSkip } from '../../utils/analytics';
 import type { Theme } from '../../utils/theme';
 import type { PredictionCard as PredictionCardType } from '../../types';
 
@@ -233,7 +234,10 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
                 <Button
                   variant="secondary"
                   theme={theme}
-                  onClick={() => setState((s) => ({ ...s, openShare: true }))}
+                  onClick={() => {
+                    trackModalOpen('share', sample.card_id);
+                    setState((s) => ({ ...s, openShare: true }));
+                  }}
                   className="animate-[pulse_1.2s_ease-in-out_1]"
                 >
                   <Share2 className="mr-2 h-5 w-5" /> Share
@@ -247,7 +251,10 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
             <div className="text-xs opacity-60 pt-1">
               <button
                 className="inline-flex items-center gap-1 hover:opacity-90"
-                onClick={() => setState((s) => ({ ...s, openReport: true }))}
+                onClick={() => {
+                  trackModalOpen('report', sample.card_id);
+                  setState((s) => ({ ...s, openReport: true }));
+                }}
               >
                 <Flag className="h-3.5 w-3.5" /> Report an issue
               </button>
@@ -258,12 +265,18 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
         {/* Footer */}
         <div className="mt-4 flex items-center justify-between text-xs sm:text-sm opacity-70">
           <button
-            onClick={() => setState((s) => ({ ...s, openDetails: true }))}
+            onClick={() => {
+              trackModalOpen('details', sample.card_id);
+              setState((s) => ({ ...s, openDetails: true }));
+            }}
             className="hover:opacity-100 inline-flex items-center gap-1"
           >
             Details <ChevronDown className="h-3.5 w-3.5" />
           </button>
-          <button className="hover:opacity-100" onClick={handleNext}>
+          <button className="hover:opacity-100" onClick={() => {
+            trackSkip(state.phase, state.cardsPlayed, state.streak);
+            handleNext();
+          }}>
             Skip
           </button>
         </div>

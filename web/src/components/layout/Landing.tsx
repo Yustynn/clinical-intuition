@@ -6,6 +6,7 @@ import { Sheet } from '../../components/ui';
 import { getDeckCounts } from '../../constants';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { trackButtonClick, trackDeckSwitch } from '../../utils/analytics';
 import { User, BarChart3 } from 'lucide-react';
 import type { Theme, ThemeMode } from '../../utils/theme';
 import type { PredictionCard as PredictionCardType } from '../../types';
@@ -66,7 +67,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
           <p className={`opacity-70 mt-1 text-sm sm:text-base md:text-lg ${theme.font}`}>
             See if you can predict which behavioral interventions worked and which didn't. Based on real trials!{' '}
             <button
-              onClick={() => setInfoOpen(true)}
+              onClick={() => {
+                trackButtonClick('more_info', 'landing_header');
+                setInfoOpen(true);
+              }}
               className="underline underline-offset-2 hover:opacity-100"
             >
               More info
@@ -76,7 +80,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
         <div className="flex items-center gap-2">
           {user && (
             <button
-              onClick={onNavigateToStats}
+              onClick={() => {
+                trackButtonClick('stats', 'landing_header');
+                onNavigateToStats();
+              }}
               className={`px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity`}
               title="View Stats"
             >
@@ -86,7 +93,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
           )}
           {user ? (
             <button
-              onClick={() => setAuthOpen(true)}
+              onClick={() => {
+                trackButtonClick('account', 'landing_header');
+                setAuthOpen(true);
+              }}
               className={`px-3 py-1.5 ${theme.btnRadius} border ${theme.secondaryBtn} text-xs flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity`}
               title={username || user.email || 'Account'}
             >
@@ -95,7 +105,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
             </button>
           ) : (
             <button
-              onClick={() => setAuthOpen(true)}
+              onClick={() => {
+                trackButtonClick('sign_up', 'landing_header');
+                setAuthOpen(true);
+              }}
               className={`px-3 py-1.5 ${theme.btnRadius} border ${theme.primaryBtn} text-xs font-medium transition-opacity`}
             >
               Sign up
@@ -113,7 +126,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
             {deckCounts.map(({ deck, count }) => (
               <button
                 key={deck}
-                onClick={() => setSelectedDeck(deck)}
+                onClick={() => {
+                  trackDeckSwitch(selectedDeck, deck, count);
+                  setSelectedDeck(deck);
+                }}
                 className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${
                   selectedDeck === deck
                     ? `${theme.primaryBtn} font-medium`

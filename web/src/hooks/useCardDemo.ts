@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useHaptics } from './useHaptics';
 import { useAuth } from './useAuth';
 import { useSyncStats } from './useSyncStats';
 import { getInitialDeck, getFilteredDeck, STORAGE_KEYS } from '../constants';
-import { trackCardAnswered, trackCardCompleted, trackMilestone } from '../utils/analytics';
+import { trackCardAnswered, trackCardCompleted, trackMilestone, trackCardTime, trackSessionDuration } from '../utils/analytics';
 import { upsertDeckStats, saveCardAnswer } from '../lib/supabaseService';
 import type { PredictionCard, GamePhase } from '../types';
 
@@ -234,10 +234,23 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
   const sample: PredictionCard = state.deck[state.idx] || allCards[0];
   const haptics = useHaptics();
 
+  // Time tracking
+  const cardStartTimeRef = useRef<number>(Date.now());
+  const sessionStartTimeRef = useRef<number>(Date.now());
+
+  // Reset card timer when card changes
+  useEffect(() => {
+    cardStartTimeRef.current = Date.now();
+  }, [state.idx, state.phase]);
+
   const answer = async (choice: 'Yes' | 'No') => {
     const correctAnswer = sample.success ? 'Yes' : 'No';
     const isCorrect = choice === correctAnswer;
     const newCardsPlayed = state.cardsPlayed + 1;
+
+    // Track time spent on this card
+    const timeSpent = Date.now() - cardStartTimeRef.current;
+    trackCardTime(timeSpent, 'question', true);
 
     // Track the answer
     trackCardAnswered(choice.toLowerCase() as 'yes' | 'no', isCorrect, newCardsPlayed);
@@ -319,12 +332,22 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
 
   const next = () => {
     setState((s) => {
+      // Track time spent in reveal phase
+      const timeSpent = Date.now() - cardStartTimeRef.current;
+      trackCardTime(timeSpent, 'reveal', s.guess !== null);
+
       // Track card completion
       trackCardCompleted(s.cardsPlayed, s.streak, s.totalCorrect, s.totalWrong);
 
       // Track milestones every 5 cards
       if (s.cardsPlayed > 0 && s.cardsPlayed % 5 === 0) {
         trackMilestone(s.cardsPlayed, s.totalCorrect, s.totalWrong);
+      }
+
+      // Track session duration every 10 cards
+      if (s.cardsPlayed > 0 && s.cardsPlayed % 10 === 0) {
+        const sessionDuration = Date.now() - sessionStartTimeRef.current;
+        trackSessionDuration(sessionDuration, s.cardsPlayed);
       }
 
       // Find next unanswered card index
