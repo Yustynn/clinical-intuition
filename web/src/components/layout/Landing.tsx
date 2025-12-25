@@ -55,7 +55,6 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
   }, [user]);
 
   const deckCounts = getDeckCounts(allCards);
-  const allDecksOption = { deck: 'All', count: allCards.length };
 
   return (
     <div className="flex flex-col items-center gap-6">
