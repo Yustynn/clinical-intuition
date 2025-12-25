@@ -147,11 +147,10 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
                   trackDeckSwitch(selectedDeck, deck, count);
                   setSelectedDeck(deck);
                 }}
-                className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${
-                  selectedDeck === deck
-                    ? `${theme.primaryBtn} font-medium`
-                    : `${theme.secondaryBtn} opacity-70 hover:opacity-100`
-                }`}
+                className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${selectedDeck === deck
+                  ? `${theme.primaryBtn} font-medium`
+                  : `${theme.secondaryBtn} opacity-70 hover:opacity-100`
+                  }`}
               >
                 {deck} ({count})
               </button>
@@ -173,7 +172,7 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
             <p className="leading-relaxed">
               Here's the thing—even experts are pretty bad at predicting what works in psychology and medicine.
               There was this big study where psychologists tried to replicate 100 experiments. They predicted 85% would work.
-              Actual success rate? 39%. Yikes.
+              Actual success rate? 39%.
             </p>
             <p className="leading-relaxed mt-2">
               I think most of us walk around with overconfident intuitions about what "should" work. Meditation apps,
@@ -196,7 +195,7 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
               <li>Mostly behavioral interventions (not drugs or devices for now)</li>
             </ul>
             <p className="leading-relaxed mt-2">
-              Then I used an LLM to turn the dense medical jargon into readable questions. About 448 cards made the cut.
+              Then I used an LLM to turn the dense medical jargon into readable questions.
             </p>
           </div>
 
