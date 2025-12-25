@@ -160,7 +160,17 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
 
         {/* Card area */}
         <div className="flex-1 flex justify-center">
-          <PredictionCard theme={theme} allCards={allCards} selectedDeck={selectedDeck} onAnswered={onPlayed} />
+          <PredictionCard
+            theme={theme}
+            allCards={allCards}
+            selectedDeck={selectedDeck}
+            deckCounts={deckCounts}
+            onAnswered={onPlayed}
+            onSwitchDeck={(deck: string) => {
+              trackDeckSwitch(selectedDeck, deck, deckCounts.find(d => d.deck === deck)?.count || 0);
+              setSelectedDeck(deck);
+            }}
+          />
         </div>
       </div>
 

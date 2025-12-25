@@ -115,3 +115,25 @@ export const trackSessionDuration = (sessionDuration: number, cardsPlayed: numbe
     });
   }
 };
+
+// Track deck completion
+export const trackDeckComplete = (
+  deckName: string,
+  totalCards: number,
+  correctCount: number,
+  wrongCount: number,
+  accuracy: number,
+  baselineAccuracy: number
+) => {
+  if (typeof window.gtag === 'function') {
+    window.gtag('event', 'deck_completed', {
+      deck_name: deckName,
+      total_cards: totalCards,
+      correct_count: correctCount,
+      wrong_count: wrongCount,
+      accuracy,
+      baseline_accuracy: baselineAccuracy,
+      performance_delta: accuracy - baselineAccuracy,
+    });
+  }
+};

@@ -6,19 +6,114 @@ import { GradientFlash, ScorePop, EmojiBurst, ParticleTrail } from '../../compon
 import QuestionStyles from '../../components/ui/QuestionStyles';
 import { useCardDemo } from '../../hooks/useCardDemo';
 import { getDeckBaseRate } from '../../constants';
-import { trackModalOpen, trackSkip } from '../../utils/analytics';
+import { trackModalOpen, trackSkip, trackDeckComplete } from '../../utils/analytics';
 import type { Theme } from '../../utils/theme';
 import type { PredictionCard as PredictionCardType } from '../../types';
+
+// Deck completion view component
+interface DeckCompletionViewProps {
+  theme: Theme;
+  deckName: string;
+  stats: {
+    totalCards: number;
+    correctCount: number;
+    wrongCount: number;
+    accuracy: number;
+  };
+  baselineAccuracy: number;
+  onSwitchDeck: () => void;
+}
+
+const DeckCompletionView: React.FC<DeckCompletionViewProps> = ({
+  theme,
+  deckName,
+  stats,
+  baselineAccuracy,
+  onSwitchDeck,
+}) => {
+  const delta = stats.accuracy - baselineAccuracy;
+  const beatBaseline = delta > 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="space-y-6 text-center"
+    >
+      {/* Celebration header */}
+      <div>
+        <h2 className="text-3xl font-bold mb-2">
+          🎉 Deck Complete!
+        </h2>
+        <p className="text-lg opacity-80">
+          You've answered all {stats.totalCards} cards in {deckName}
+        </p>
+      </div>
+
+      {/* Stats summary */}
+      <div className={`${theme.btnRadius} border border-amber-300 dark:border-amber-700 p-6 space-y-4`}>
+        <h3 className="font-semibold text-lg">Your Performance</h3>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+              {stats.correctCount}
+            </div>
+            <div className="text-sm opacity-70">Correct</div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+              {stats.wrongCount}
+            </div>
+            <div className="text-sm opacity-70">Incorrect</div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-amber-300 dark:border-amber-700 space-y-2">
+          <div className="text-2xl font-bold">
+            {stats.accuracy}% accuracy
+          </div>
+          <div className="text-sm opacity-70">
+            Scientists: {baselineAccuracy}%
+          </div>
+
+          {beatBaseline ? (
+            <div className={`mt-3 p-3 rounded ${theme.key === 'retroDark' ? 'bg-amber-900/30' : 'bg-amber-100'}`}>
+              <div className="text-lg font-semibold">
+                🔥 You beat the baseline by {Math.abs(delta)}%!
+              </div>
+            </div>
+          ) : delta < 0 ? (
+            <div className="text-sm opacity-70 mt-2">
+              Scientists were {Math.abs(delta)}% more accurate
+            </div>
+          ) : (
+            <div className="text-sm opacity-70 mt-2">
+              Tied with scientists!
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action button */}
+      <Button theme={theme} onClick={onSwitchDeck} className="w-full">
+        Switch Deck
+      </Button>
+    </motion.div>
+  );
+};
 
 interface PredictionCardProps {
   theme: Theme;
   allCards: PredictionCardType[];
   selectedDeck?: string | null;
+  deckCounts?: { deck: string; count: number }[];
   onAnswered?: () => void;
   onNext?: () => void;
+  onSwitchDeck?: (deck: string) => void;
 }
 
-const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, selectedDeck = null, onAnswered, onNext }) => {
+const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, selectedDeck = null, deckCounts = [], onAnswered, onNext, onSwitchDeck }) => {
   const { state, setState, sample, answer, next, share, addTrail } = useCardDemo(allCards, selectedDeck);
 
   const baseRate = getDeckBaseRate(allCards, selectedDeck);
@@ -44,6 +139,30 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
   };
 
   const streakHot = state.streak >= 3;
+
+  // Helper to compute deck completion stats
+  const getCompletionStats = () => {
+    // Get base deck (all cards in selected deck)
+    const baseDeck = selectedDeck
+      ? allCards.filter(card => card.decks?.includes(selectedDeck))
+      : allCards;
+
+    // Use current state stats (works for both authenticated and anonymous users)
+    const correctCount = state.totalCorrect;
+    const wrongCount = state.totalWrong;
+    const totalAnswered = state.cardsPlayed;
+    const accuracy = totalAnswered > 0
+      ? Math.round((correctCount / totalAnswered) * 100)
+      : 0;
+
+    return {
+      totalCards: baseDeck.length,
+      answeredCount: totalAnswered,
+      correctCount,
+      wrongCount,
+      accuracy,
+    };
+  };
 
   // Keyboard shortcuts for desktop users
   useEffect(() => {
@@ -76,6 +195,21 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [state.phase, answer, onAnswered, handleNext]);
+
+  // Track deck completion analytics
+  useEffect(() => {
+    if (state.phase === 'complete') {
+      const stats = getCompletionStats();
+      trackDeckComplete(
+        selectedDeck || 'All',
+        stats.totalCards,
+        stats.correctCount,
+        stats.wrongCount,
+        stats.accuracy,
+        baseRate
+      );
+    }
+  }, [state.phase]);
 
   return (
     <div className={`w-full max-w-[390px] sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl mx-auto ${theme.font}`}>
@@ -262,6 +396,19 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
           </motion.div>
         )}
 
+        {/* Deck Complete */}
+        {state.phase === 'complete' && (
+          <div className="mt-5 relative z-10">
+            <DeckCompletionView
+              theme={theme}
+              deckName={selectedDeck || 'All'}
+              stats={getCompletionStats()}
+              baselineAccuracy={baseRate}
+              onSwitchDeck={() => setState((s) => ({ ...s, openDeckSelector: true }))}
+            />
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-4 flex items-center justify-between text-xs sm:text-sm opacity-70">
           <button
@@ -415,6 +562,42 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
             </Button>
           </div>
         </form>
+      </Sheet>
+
+      {/* Deck selector modal */}
+      <Sheet
+        open={state.openDeckSelector}
+        onClose={() => setState((s) => ({ ...s, openDeckSelector: false }))}
+        title="Choose a deck"
+        theme={theme}
+      >
+        <div className="space-y-3">
+          {deckCounts.map(({ deck, count }) => {
+            const isCurrentDeck = deck === selectedDeck;
+
+            return (
+              <button
+                key={deck}
+                onClick={() => {
+                  onSwitchDeck?.(deck);
+                  setState((s) => ({ ...s, openDeckSelector: false }));
+                }}
+                className={`w-full p-4 ${theme.btnRadius} border transition-all text-left ${
+                  isCurrentDeck
+                    ? `${theme.primaryBtn} font-semibold`
+                    : `border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20`
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">{deck}</div>
+                    <div className="text-sm opacity-70">{count} cards</div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </Sheet>
 
       <Toast show={!!state.toast} message={state.toast} theme={theme} />

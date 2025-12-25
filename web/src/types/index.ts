@@ -63,4 +63,4 @@ export interface AnonymousUserData {
 
 export type FeedFilter = 'all' | 'behavioral' | 'pharmaceutical' | 'device';
 export type Theme = 'light' | 'dark';
-export type GamePhase = 'question' | 'reveal';
+export type GamePhase = 'question' | 'reveal' | 'complete';

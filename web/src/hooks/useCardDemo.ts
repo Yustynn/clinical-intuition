@@ -27,7 +27,7 @@ function saveDeckStats(stats: Record<string, DeckStats>) {
 }
 
 // Load card answers from localStorage
-function loadCardAnswers(): Array<{
+export function loadCardAnswers(): Array<{
   card_id: string;
   deck_name: string;
   answer: 'Yes' | 'No';
@@ -100,6 +100,7 @@ interface CardDemoState {
   openDetails: boolean;
   openShare: boolean;
   openReport: boolean;
+  openDeckSelector: boolean;
   toast: string;
   flash: { a: string; b: string } | null;
   streak: number;
@@ -135,6 +136,11 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     // Filter deck to exclude answered cards
     const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
     const filteredDeck = baseDeck.filter(card => !answeredCardIds.has(card.card_id));
+
+    // Check if deck is complete
+    const isDeckComplete = baseDeck.length > 0 && filteredDeck.length === 0;
+
+    // Use filtered deck, or base deck if complete (for display purposes)
     const finalDeck = filteredDeck.length > 0 ? filteredDeck : baseDeck;
 
     // Check if there's a card ID in the URL
@@ -154,12 +160,13 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
 
     return {
       idx: initialIdx,
-      phase: 'question',
+      phase: isDeckComplete ? 'complete' : 'question',
       guess: null,
       correct: null,
       openDetails: false,
       openShare: false,
       openReport: false,
+      openDeckSelector: false,
       toast: '',
       flash: null,
       streak: 0,
@@ -194,6 +201,10 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         // Filter deck to exclude answered cards
         const baseDeck = selectedDeck ? getFilteredDeck(allCards, selectedDeck) : getInitialDeck(allCards);
         const filteredDeck = baseDeck.filter(card => !mergedAnsweredCardIds.has(card.card_id));
+
+        // Check if deck is complete
+        const isDeckComplete = baseDeck.length > 0 && filteredDeck.length === 0;
+
         const newDeck = filteredDeck.length > 0 ? filteredDeck : baseDeck;
 
         // Preserve current card if possible
@@ -220,7 +231,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
           totalWrong: stats.totalWrong,
           cardsPlayed: stats.cardsPlayed,
           idx: newIdx,
-          phase: 'question',
+          phase: isDeckComplete ? 'complete' : 'question',
           guess: null,
           correct: null,
         };
@@ -244,6 +255,9 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         totalWrong: 0,
         cardsPlayed: 0,
       };
+
+      // Check if deck is complete
+      const isDeckComplete = baseDeck.length > 0 && filteredDeck.length === 0;
 
       const newDeck = filteredDeck.length > 0 ? filteredDeck : baseDeck;
       let newIdx = 0;
@@ -270,7 +284,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         deck: newDeck,
         currentDeckKey: newDeckKey,
         idx: newIdx,
-        phase: 'question',
+        phase: isDeckComplete ? 'complete' : 'question',
         guess: null,
         correct: null,
         flash: null,
@@ -438,10 +452,13 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         attempts++;
       }
 
+      // Detect completion: all cards answered
+      const isDeckComplete = attempts >= s.deck.length;
+
       return {
         ...s,
         idx: nextIdx,
-        phase: 'question',
+        phase: isDeckComplete ? 'complete' : 'question',
         guess: null,
         correct: null,
         flash: null,
