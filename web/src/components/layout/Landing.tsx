@@ -34,7 +34,6 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
       // Find which deck contains this card
       const card = allCards.find(c => c.card_id === sharedCardId);
       if (card && card.decks && card.decks.length > 0) {
-        console.log('🎯 Shared card found, auto-selecting deck:', card.decks[0]);
         return card.decks[0];
       }
     }

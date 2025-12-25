@@ -21,7 +21,6 @@ export function useSyncStats() {
     // Check if we should skip sync (after a reset)
     const skipSync = localStorage.getItem('SKIP_NEXT_SYNC');
     if (skipSync === 'true') {
-      console.log('⏭️ Skipping sync after reset');
       localStorage.removeItem('SKIP_NEXT_SYNC');
       setSynced(true); // Mark as synced to prevent future attempts
       return;

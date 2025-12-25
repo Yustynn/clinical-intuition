@@ -154,14 +154,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
     try {
       // If user is signed in, delete from Supabase first
       if (user) {
-        console.log('🗑️ Resetting progress for authenticated user...');
         await deleteAllUserProgress(user.id);
-        console.log('✅ Database wiped, now clearing localStorage...');
       }
 
       // Clear localStorage
       clearAllProgress();
-      console.log('✅ localStorage cleared');
 
       // Set a flag to prevent sync on next page load
       // This ensures we start completely fresh
@@ -174,8 +171,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
       // Wait a bit to ensure all operations complete before reloading
       // This prevents race conditions where sync happens before deletion completes
       await new Promise(resolve => setTimeout(resolve, 800));
-
-      console.log('🔄 Reloading page with fresh state...');
 
       // Reload with cache busting to ensure clean slate
       window.location.href = window.location.href.split('?')[0] + '?t=' + Date.now();

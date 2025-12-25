@@ -145,25 +145,10 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     // Store shared card ID in ref for later use
     if (sharedCardId) {
       sharedCardIdRef.current = sharedCardId;
-    }
-
-    console.log('🔍 Initializing deck:', {
-      url: window.location.href,
-      search: window.location.search,
-      sharedCardId,
-      deckSize: finalDeck.length,
-      selectedDeck: selectedDeck || 'All',
-    });
-
-    if (sharedCardId) {
       // Find the card in the deck
       const cardIndex = finalDeck.findIndex(card => card.card_id === sharedCardId);
       if (cardIndex !== -1) {
         initialIdx = cardIndex;
-        console.log('✅ Found shared card:', sharedCardId, 'at index', cardIndex);
-      } else {
-        console.log('❌ Shared card NOT found in deck:', sharedCardId);
-        console.log('Available cards:', finalDeck.map(c => c.card_id).slice(0, 10));
       }
     }
 
@@ -218,9 +203,6 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
           const foundIdx = newDeck.findIndex(card => card.card_id === currentCard.card_id);
           if (foundIdx !== -1) {
             newIdx = foundIdx;
-            console.log('🔄 Sync: Preserving current card at new index', foundIdx);
-          } else {
-            console.log('⚠️ Sync: Current card not in new deck, resetting to 0');
           }
         }
 
@@ -255,13 +237,6 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     // Use ref instead of URL (persists after cleanup)
     const sharedCardId = sharedCardIdRef.current;
 
-    console.log('🔄 Deck change effect:', {
-      oldDeck: state.currentDeckKey,
-      newDeck: newDeckKey,
-      currentIdx: state.idx,
-      sharedCardId,
-    });
-
     setState((s) => {
       // Get stats for this deck, or initialize if not present
       const stats = s.deckStats[newDeckKey] || {
@@ -278,9 +253,6 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         const cardIndex = newDeck.findIndex(card => card.card_id === sharedCardId);
         if (cardIndex !== -1) {
           newIdx = cardIndex;
-          console.log('✅ Deck change: Preserving shared card at index', cardIndex);
-        } else {
-          console.log('⚠️ Deck change: Shared card not found, resetting to 0');
         }
       } else if (s.currentDeckKey === newDeckKey) {
         // Same deck, preserve current card
@@ -289,11 +261,8 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
           const foundIdx = newDeck.findIndex(card => card.card_id === currentCard.card_id);
           if (foundIdx !== -1) {
             newIdx = foundIdx;
-            console.log('✅ Deck change: Preserving current card at index', foundIdx);
           }
         }
-      } else {
-        console.log('🔄 Deck change: New deck selected, resetting to 0');
       }
 
       return {
@@ -338,14 +307,6 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
   }, []);
 
   const answer = async (choice: 'Yes' | 'No') => {
-    const answerId = Math.random().toString(36).substring(7);
-    console.log(`🎯 [${answerId}] answer() called:`, {
-      cardId: sample.card_id,
-      choice,
-      phase: state.phase,
-      authenticated: !!user,
-    });
-
     const correctAnswer = sample.success ? 'Yes' : 'No';
     const isCorrect = choice === correctAnswer;
     const newCardsPlayed = state.cardsPlayed + 1;
@@ -402,13 +363,6 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     // AFTER state update, save to Supabase (side effects outside setState)
     if (user) {
       // For authenticated users, save directly to Supabase (skip localStorage to avoid duplicates)
-      console.log(`🔵 [${answerId}] User authenticated, saving to Supabase:`, {
-        userId: user.id,
-        email: user.email,
-        deck: state.currentDeckKey,
-        cardId: sample.card_id,
-      });
-
       const deckStats = {
         totalCorrect: isCorrect ? state.totalCorrect + 1 : state.totalCorrect,
         totalWrong: !isCorrect ? state.totalWrong + 1 : state.totalWrong,
@@ -416,14 +370,9 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
       };
 
       // Save deck stats
-      upsertDeckStats(user.id, state.currentDeckKey, deckStats)
-        .then(() => {
-          console.log(`✅ [${answerId}] Deck stats saved successfully to Supabase`);
-        })
-        .catch((err) => {
-          console.error(`❌ [${answerId}] Failed to sync deck stats to Supabase:`, err);
-          console.error('Full error details:', JSON.stringify(err, null, 2));
-        });
+      upsertDeckStats(user.id, state.currentDeckKey, deckStats).catch((err) => {
+        console.error('Failed to sync deck stats to Supabase:', err);
+      });
 
       // Save individual card answer
       saveCardAnswer(user.id, {
@@ -431,17 +380,11 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         deck_name: state.currentDeckKey,
         answer: choice,
         correct: isCorrect,
-      })
-        .then(() => {
-          console.log(`✅ [${answerId}] Card answer saved successfully to Supabase`);
-        })
-        .catch((err) => {
-          console.error(`❌ [${answerId}] Failed to save card answer to Supabase:`, err);
-          console.error('Full error details:', JSON.stringify(err, null, 2));
-        });
+      }).catch((err) => {
+        console.error('Failed to save card answer to Supabase:', err);
+      });
     } else {
       // For anonymous users, save card answer to localStorage as fallback
-      console.log(`⚪ [${answerId}] User not authenticated, saving card answer to localStorage`);
       saveCardAnswerToLocal({
         card_id: sample.card_id,
         deck_name: state.currentDeckKey,

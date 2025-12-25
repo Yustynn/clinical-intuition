@@ -29,8 +29,6 @@ export async function ensureUserExists(userId: string, email?: string) {
   }
 
   // User doesn't exist, create them
-  console.log('🔧 User record missing, creating entry in users table for:', userId);
-
   const { error: insertError } = await supabase
     .from('users')
     .insert({
@@ -43,8 +41,6 @@ export async function ensureUserExists(userId: string, email?: string) {
     console.error('❌ Failed to create user record:', insertError);
     throw insertError;
   }
-
-  console.log('✅ User record created successfully');
 }
 
 /**
@@ -127,20 +123,10 @@ export async function saveCardAnswer(
   userId: string,
   answer: CardAnswer
 ) {
-  const callId = Math.random().toString(36).substring(7);
-  console.log(`💾 [${callId}] saveCardAnswer called:`, {
-    userId: userId.substring(0, 8),
-    cardId: answer.card_id,
-    answer: answer.answer,
-    correct: answer.correct,
-    stack: new Error().stack?.split('\n')[2]?.trim(), // Show caller
-  });
-
   // Ensure user exists first to avoid foreign key constraint errors
   await ensureUserExists(userId);
 
   const timestamp = new Date().toISOString();
-  console.log(`💾 [${callId}] Inserting to Supabase at ${timestamp}`);
 
   const { error } = await supabase
     .from('card_answers')
@@ -154,11 +140,9 @@ export async function saveCardAnswer(
     });
 
   if (error) {
-    console.error(`❌ [${callId}] Error saving card answer:`, error);
+    console.error('Error saving card answer:', error);
     throw error;
   }
-
-  console.log(`✅ [${callId}] Card answer saved successfully`);
 }
 
 /**
@@ -175,8 +159,6 @@ export async function fetchDeckStats(userId: string): Promise<Record<string, Dec
     console.error('Error fetching deck stats:', error);
     throw error;
   }
-
-  console.log('📊 Fetched deck stats from Supabase:', data?.length || 0, 'records');
 
   // Convert array to Record
   const statsRecord: Record<string, DeckStats> = {};
@@ -219,8 +201,6 @@ export async function fetchCardAnswers(
     throw error;
   }
 
-  console.log('📝 Fetched card answers from Supabase:', data?.length || 0, 'records');
-
   return data;
 }
 
@@ -228,23 +208,8 @@ export async function fetchCardAnswers(
  * Delete all progress for a user (deck stats and card answers)
  */
 export async function deleteAllUserProgress(userId: string) {
-  console.log('🗑️ Deleting all progress from Supabase for user:', userId);
-
-  // First, check what we're about to delete
-  const { count: deckCount } = await supabase
-    .from('deck_stats')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId);
-
-  const { count: answerCount } = await supabase
-    .from('card_answers')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId);
-
-  console.log(`📊 Found ${deckCount || 0} deck stats and ${answerCount || 0} card answers to delete`);
-
   // Delete all deck stats
-  const { error: deckStatsError, count: deletedDeckCount } = await supabase
+  const { error: deckStatsError } = await supabase
     .from('deck_stats')
     .delete({ count: 'exact' })
     .eq('user_id', userId);
@@ -254,10 +219,8 @@ export async function deleteAllUserProgress(userId: string) {
     throw deckStatsError;
   }
 
-  console.log(`✅ Deleted ${deletedDeckCount || 0} deck stats records`);
-
   // Delete all card answers
-  const { error: cardAnswersError, count: deletedAnswerCount } = await supabase
+  const { error: cardAnswersError } = await supabase
     .from('card_answers')
     .delete({ count: 'exact' })
     .eq('user_id', userId);
@@ -266,8 +229,6 @@ export async function deleteAllUserProgress(userId: string) {
     console.error('❌ Error deleting card answers:', cardAnswersError);
     throw cardAnswersError;
   }
-
-  console.log(`✅ Deleted ${deletedAnswerCount || 0} card answers records`);
 
   // Verify deletion
   const { count: remainingDeckCount } = await supabase
@@ -284,6 +245,4 @@ export async function deleteAllUserProgress(userId: string) {
     console.error(`⚠️ WARNING: Deletion incomplete! Remaining: ${remainingDeckCount || 0} deck stats, ${remainingAnswerCount || 0} answers`);
     throw new Error('Deletion verification failed - some records remain');
   }
-
-  console.log('✅ Verified: All data successfully deleted (0 records remaining)');
 }
