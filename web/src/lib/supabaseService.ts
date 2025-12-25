@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { STORAGE_KEYS } from '../constants';
 
 export interface DeckStats {
   totalCorrect: number;
@@ -244,5 +245,118 @@ export async function deleteAllUserProgress(userId: string) {
   if ((remainingDeckCount || 0) > 0 || (remainingAnswerCount || 0) > 0) {
     console.error(`⚠️ WARNING: Deletion incomplete! Remaining: ${remainingDeckCount || 0} deck stats, ${remainingAnswerCount || 0} answers`);
     throw new Error('Deletion verification failed - some records remain');
+  }
+}
+
+/**
+ * Get or create a session ID for anonymous users
+ * Stored in localStorage and used to track anonymous card answers
+ */
+export function getOrCreateSessionId(): string {
+  try {
+    let sessionId = localStorage.getItem(STORAGE_KEYS.ANONYMOUS_SESSION_ID);
+
+    if (!sessionId) {
+      // Generate a unique session ID
+      sessionId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      localStorage.setItem(STORAGE_KEYS.ANONYMOUS_SESSION_ID, sessionId);
+    }
+
+    return sessionId;
+  } catch {
+    // If localStorage is not available, return a temporary session ID
+    return `temp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  }
+}
+
+/**
+ * Save an anonymous card answer
+ */
+export async function saveAnonymousCardAnswer(answer: CardAnswer) {
+  const sessionId = getOrCreateSessionId();
+  const timestamp = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('anonymous_card_answers')
+    .insert({
+      session_id: sessionId,
+      card_id: answer.card_id,
+      deck_name: answer.deck_name,
+      answer: answer.answer,
+      correct: answer.correct,
+      timestamp,
+    });
+
+  if (error) {
+    console.error('Error saving anonymous card answer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch anonymous card answers by session ID
+ */
+export async function fetchAnonymousCardAnswers(sessionId?: string) {
+  const sid = sessionId || getOrCreateSessionId();
+
+  const { data, error } = await supabase
+    .from('anonymous_card_answers')
+    .select('*')
+    .eq('session_id', sid)
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching anonymous card answers:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+/**
+ * Migrate anonymous answers to authenticated user account
+ * Called when user signs up
+ */
+export async function migrateAnonymousAnswers(userId: string) {
+  const sessionId = getOrCreateSessionId();
+
+  // Ensure user exists first
+  await ensureUserExists(userId);
+
+  // Fetch all anonymous answers for this session
+  const anonymousAnswers = await fetchAnonymousCardAnswers(sessionId);
+
+  if (anonymousAnswers.length === 0) {
+    return; // No answers to migrate
+  }
+
+  // Migrate each answer to the user's account
+  const migrationPromises = anonymousAnswers.map(async (anonAnswer) => {
+    await saveCardAnswer(userId, {
+      card_id: anonAnswer.card_id,
+      deck_name: anonAnswer.deck_name,
+      answer: anonAnswer.answer as 'Yes' | 'No',
+      correct: anonAnswer.correct,
+    });
+  });
+
+  await Promise.all(migrationPromises);
+
+  // Delete the anonymous answers after successful migration
+  const { error: deleteError } = await supabase
+    .from('anonymous_card_answers')
+    .delete()
+    .eq('session_id', sessionId);
+
+  if (deleteError) {
+    console.error('Error deleting anonymous answers after migration:', deleteError);
+    // Don't throw - migration was successful, cleanup failed
+  }
+
+  // Clear the session ID from localStorage
+  try {
+    localStorage.removeItem(STORAGE_KEYS.ANONYMOUS_SESSION_ID);
+  } catch {
+    // Silently fail if localStorage is not available
   }
 }

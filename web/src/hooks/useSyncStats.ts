@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
-import { fetchDeckStats, upsertDeckStats, saveCardAnswer, fetchCardAnswers, ensureUserExists, type DeckStats } from '../lib/supabaseService';
+import { fetchDeckStats, upsertDeckStats, saveCardAnswer, fetchCardAnswers, ensureUserExists, migrateAnonymousAnswers, type DeckStats } from '../lib/supabaseService';
 import { STORAGE_KEYS } from '../constants';
 
 /**
@@ -31,6 +31,9 @@ export function useSyncStats() {
       try {
         // Ensure user record exists in users table before syncing
         await ensureUserExists(user.id, user.email || undefined);
+
+        // Migrate anonymous answers if any exist
+        await migrateAnonymousAnswers(user.id);
 
         // Load localStorage stats
         const localStatsStr = localStorage.getItem(STORAGE_KEYS.DECK_STATS);

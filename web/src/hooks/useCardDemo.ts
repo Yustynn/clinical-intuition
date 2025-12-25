@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { useSyncStats } from './useSyncStats';
 import { getInitialDeck, getFilteredDeck, STORAGE_KEYS } from '../constants';
 import { trackCardAnswered, trackCardCompleted, trackMilestone, trackCardTime, trackSessionDuration } from '../utils/analytics';
-import { upsertDeckStats, saveCardAnswer } from '../lib/supabaseService';
+import { upsertDeckStats, saveCardAnswer, saveAnonymousCardAnswer } from '../lib/supabaseService';
 import type { PredictionCard, GamePhase } from '../types';
 
 // Load deck stats from localStorage
@@ -384,12 +384,23 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         console.error('Failed to save card answer to Supabase:', err);
       });
     } else {
-      // For anonymous users, save card answer to localStorage as fallback
+      // For anonymous users, save to both localStorage (local) and Supabase (analytics)
       saveCardAnswerToLocal({
         card_id: sample.card_id,
         deck_name: state.currentDeckKey,
         answer: choice,
         correct: isCorrect,
+      });
+
+      // Also save to anonymous answers table in Supabase for tracking
+      saveAnonymousCardAnswer({
+        card_id: sample.card_id,
+        deck_name: state.currentDeckKey,
+        answer: choice,
+        correct: isCorrect,
+      }).catch((err) => {
+        console.error('Failed to save anonymous card answer to Supabase:', err);
+        // Don't block user if this fails - localStorage is the fallback
       });
     }
 

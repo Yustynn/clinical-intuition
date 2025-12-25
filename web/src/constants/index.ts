@@ -2,6 +2,7 @@ export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api
 
 export const STORAGE_KEYS = {
   ANONYMOUS_SESSION: 'anonymous_session_data',
+  ANONYMOUS_SESSION_ID: 'anonymous_session_id',
   THEME: 'retro_theme_mode',
   USER_PREFERENCES: 'user_preferences',
   DECK_STATS: 'deck_stats',
