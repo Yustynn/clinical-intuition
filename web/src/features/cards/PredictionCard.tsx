@@ -48,37 +48,34 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
   // Keyboard shortcuts for desktop users
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Only handle shortcuts when in question phase
-      if (state.phase !== 'question') return;
-
       // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (e.key === 'y' || e.key === 'Y' || e.key === 'ArrowLeft') {
-        e.preventDefault();
-        // Create synthetic mouse event for particle effect
-        const syntheticEvent = {
-          clientX: window.innerWidth / 2 - 100,
-          clientY: window.innerHeight / 2,
-        } as React.MouseEvent<HTMLButtonElement>;
-        addTrail(syntheticEvent);
-        answer('Yes');
-        onAnswered?.();
-      } else if (e.key === 'n' || e.key === 'N' || e.key === 'ArrowRight') {
-        e.preventDefault();
-        const syntheticEvent = {
-          clientX: window.innerWidth / 2 + 100,
-          clientY: window.innerHeight / 2,
-        } as React.MouseEvent<HTMLButtonElement>;
-        addTrail(syntheticEvent);
-        answer('No');
-        onAnswered?.();
+      // Question phase: Y/N shortcuts
+      if (state.phase === 'question') {
+        if (e.key === 'y' || e.key === 'Y' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          answer('Yes');
+          onAnswered?.();
+        } else if (e.key === 'n' || e.key === 'N' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          answer('No');
+          onAnswered?.();
+        }
+      }
+
+      // Reveal phase: Space to continue
+      if (state.phase === 'reveal') {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          handleNext();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [state.phase, answer, addTrail, onAnswered]);
+  }, [state.phase, answer, onAnswered, handleNext]);
 
   return (
     <div className={`w-full max-w-[390px] sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl mx-auto ${theme.font}`}>
@@ -244,7 +241,10 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
                 </Button>
               </motion.div>
               <Button theme={theme} onClick={handleNext}>
-                Next
+                <span className="inline-flex items-center gap-2">
+                  Next
+                  <kbd className="hidden lg:inline text-xs opacity-60 font-mono">[Space]</kbd>
+                </span>
               </Button>
             </div>
             

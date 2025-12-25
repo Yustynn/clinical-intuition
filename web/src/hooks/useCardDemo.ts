@@ -413,15 +413,20 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     setTimeout(() => setState((s) => ({ ...s, toast: '' })), 1400);
   };
 
-  const addTrail = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const addTrail = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    // Skip trail effect for keyboard events (when e is undefined or missing currentTarget)
+    if (!e || !e.currentTarget) {
+      return;
+    }
+
     const r = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - r.left;
     const y = e.clientY - r.top;
     const id = Math.random();
     setState((s) => ({ ...s, trail: [...s.trail, { id, x, y }] }));
-    setTimeout(() => setState((s) => ({ 
-      ...s, 
-      trail: s.trail.filter((t) => t.id !== id) 
+    setTimeout(() => setState((s) => ({
+      ...s,
+      trail: s.trail.filter((t) => t.id !== id)
     })), 500);
   };
 
