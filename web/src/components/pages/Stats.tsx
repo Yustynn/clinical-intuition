@@ -4,6 +4,7 @@ import { fetchDeckStats, fetchCardAnswers } from '../../lib/supabaseService';
 import { getDeckBaseRate } from '../../constants';
 import { Sheet } from '../../components/ui';
 import QuestionStyles from '../../components/ui/QuestionStyles';
+import { AccuracyTimeline, DeckComparison } from '../../components/charts';
 import { ArrowLeft, TrendingUp, Target, Zap, ExternalLink } from 'lucide-react';
 import type { Theme } from '../../utils/theme';
 import type { PredictionCard } from '../../types';
@@ -180,6 +181,25 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
           <div className="text-xs opacity-60 mt-1">last 10 vs prev 10</div>
         </div>
       </div>
+
+      {/* Charts Section */}
+      {overallStats.cardsPlayed > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Accuracy Timeline */}
+          <AccuracyTimeline
+            answers={recentAnswers}
+            theme={theme}
+            baseline={getDeckBaseRate(allCards, null)}
+          />
+
+          {/* Deck Comparison */}
+          <DeckComparison
+            deckStats={deckStats}
+            allCards={allCards}
+            theme={theme}
+          />
+        </div>
+      )}
 
       {/* Performance by Deck */}
       {Object.keys(deckStats).length > 0 && (
