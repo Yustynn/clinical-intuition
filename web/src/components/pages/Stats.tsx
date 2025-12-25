@@ -135,7 +135,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
   const trend = secondHalfAccuracy - firstHalfAccuracy;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto">
       {/* Header */}
       <button
         onClick={onBack}
@@ -145,10 +145,10 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
         Back
       </button>
 
-      <h1 className={`text-3xl font-semibold mb-6 ${theme.font}`}>Your Stats</h1>
+      <h1 className={`text-2xl sm:text-3xl md:text-4xl font-semibold mb-6 ${theme.font}`}>Your Stats</h1>
 
       {/* Overall Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className={`p-4 ${theme.btnRadius} border border-amber-300`}>
           <div className="flex items-center gap-2 mb-2 opacity-70">
             <Target className="h-4 w-4" />
@@ -184,7 +184,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
       {/* Performance by Deck */}
       {Object.keys(deckStats).length > 0 && (
         <div className="mb-6">
-          <h2 className={`text-xl font-semibold mb-3 ${theme.font}`}>Performance by Deck</h2>
+          <h2 className={`text-lg sm:text-xl md:text-2xl font-semibold mb-3 ${theme.font}`}>Performance by Deck</h2>
           <div className="space-y-2">
             {Object.entries(deckStats)
               .sort(([, a], [, b]) => b.cardsPlayed - a.cardsPlayed)
@@ -219,7 +219,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
       {/* Recent Activity */}
       {recentAnswers.length > 0 && (
         <div className="mb-6">
-          <h2 className={`text-xl font-semibold mb-3 ${theme.font}`}>Recent Activity</h2>
+          <h2 className={`text-lg sm:text-xl md:text-2xl font-semibold mb-3 ${theme.font}`}>Recent Activity</h2>
           <div className={`${theme.btnRadius} border border-amber-300 divide-y divide-amber-300`}>
             {recentAnswers.slice(0, 10).map((answer, idx) => {
               const date = new Date(answer.timestamp);
@@ -237,7 +237,7 @@ const Stats: React.FC<StatsProps> = ({ theme, onBack, allCards }) => {
                 >
                   <div className="flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{capitalizedIntervention}</div>
+                      <div className="text-sm font-medium truncate lg:whitespace-normal lg:overflow-visible">{capitalizedIntervention}</div>
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {decks.map((deck, i) => (
                           <span

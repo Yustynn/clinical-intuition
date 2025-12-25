@@ -27,7 +27,7 @@ const Sheet: React.FC<SheetProps> = ({ open, onClose, title, children, theme }) 
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-            className={`relative z-10 w-full sm:w-[560px] max-h-[90vh] sm:max-h-[85vh] flex flex-col ${theme.radius} ${theme.card}`}
+            className={`relative z-10 w-full sm:w-[560px] lg:w-[720px] xl:w-[960px] max-h-[90vh] sm:max-h-[85vh] flex flex-col ${theme.radius} ${theme.card}`}
           >
             <div className="flex items-center justify-between p-5 pb-3 flex-shrink-0">
               <h3 className="text-lg font-semibold">{title}</h3>

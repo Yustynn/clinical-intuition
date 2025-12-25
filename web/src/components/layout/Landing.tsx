@@ -58,12 +58,12 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <header className="w-full max-w-[480px] flex items-start justify-between">
+      <header className="w-full max-w-[480px] sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-6xl flex items-start justify-between">
         <div>
-          <h1 className={`text-3xl md:text-3xl font-semibold ${theme.font}`}>
+          <h1 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold ${theme.font}`}>
             Can you beat scientists' intuitions?
           </h1>
-          <p className={`opacity-70 mt-1 ${theme.font}`}>
+          <p className={`opacity-70 mt-1 text-sm sm:text-base md:text-lg ${theme.font}`}>
             See if you can predict which behavioral interventions worked and which didn't. Based on real trials!{' '}
             <button
               onClick={() => setInfoOpen(true)}
@@ -105,28 +105,31 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
         </div>
       </header>
 
-      {/* Deck filter */}
-      <div className="w-full max-w-[420px]">
-        <div className="flex flex-wrap gap-2 text-sm">
-          {deckCounts.map(({ deck, count }) => (
-            <button
-              key={deck}
-              onClick={() => setSelectedDeck(deck)}
-              className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${
-                selectedDeck === deck
-                  ? `${theme.primaryBtn} font-medium`
-                  : `${theme.secondaryBtn} opacity-70 hover:opacity-100`
-              }`}
-            >
-              {deck} ({count})
-            </button>
-          ))}
+      {/* Deck filter + Card area - side-by-side on desktop */}
+      <div className="w-full max-w-[420px] sm:max-w-xl md:max-w-2xl lg:max-w-6xl flex flex-col lg:flex-row lg:items-start gap-6">
+        {/* Deck filter */}
+        <div className="w-full lg:w-64 lg:flex-shrink-0">
+          <div className="flex flex-wrap lg:flex-col gap-2 text-sm">
+            {deckCounts.map(({ deck, count }) => (
+              <button
+                key={deck}
+                onClick={() => setSelectedDeck(deck)}
+                className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${
+                  selectedDeck === deck
+                    ? `${theme.primaryBtn} font-medium`
+                    : `${theme.secondaryBtn} opacity-70 hover:opacity-100`
+                }`}
+              >
+                {deck} ({count})
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Card area */}
-      <div className="w-full max-w-[420px]">
-        <PredictionCard theme={theme} allCards={allCards} selectedDeck={selectedDeck} onAnswered={onPlayed} />
+        {/* Card area */}
+        <div className="flex-1 flex justify-center">
+          <PredictionCard theme={theme} allCards={allCards} selectedDeck={selectedDeck} onAnswered={onPlayed} />
+        </div>
       </div>
 
       {/* Info sheet */}

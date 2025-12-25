@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Share2, ChevronDown, X, Check, Flag, ExternalLink, Flame, Sparkles } from 'lucide-react';
 import { Button, Sheet, Toast } from '../../components/ui';
@@ -41,11 +41,46 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
     next();
     onNext?.();
   };
-  
+
   const streakHot = state.streak >= 3;
 
+  // Keyboard shortcuts for desktop users
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Only handle shortcuts when in question phase
+      if (state.phase !== 'question') return;
+
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === 'y' || e.key === 'Y' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        // Create synthetic mouse event for particle effect
+        const syntheticEvent = {
+          clientX: window.innerWidth / 2 - 100,
+          clientY: window.innerHeight / 2,
+        } as React.MouseEvent<HTMLButtonElement>;
+        addTrail(syntheticEvent);
+        answer('Yes');
+        onAnswered?.();
+      } else if (e.key === 'n' || e.key === 'N' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const syntheticEvent = {
+          clientX: window.innerWidth / 2 + 100,
+          clientY: window.innerHeight / 2,
+        } as React.MouseEvent<HTMLButtonElement>;
+        addTrail(syntheticEvent);
+        answer('No');
+        onAnswered?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [state.phase, answer, addTrail, onAnswered]);
+
   return (
-    <div className={`w-[390px] max-w-full mx-auto ${theme.font}`}>
+    <div className={`w-full max-w-[390px] sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl mx-auto ${theme.font}`}>
       <div className={`relative ${theme.radius} border ${theme.card} ${streakHot ? theme.glow + ' ring-4' : ''} shadow-lg p-5 overflow-hidden`}>
         {/* Retro CRT scanlines + soft phosphor glow */}
         <div className={`pointer-events-none absolute inset-0 ${theme.scanlines}`} />
@@ -73,7 +108,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between text-xs opacity-70">
+        <div className="flex items-center justify-between text-xs sm:text-sm opacity-70">
           <div className="inline-flex items-center gap-2">
             <span>Scientist: {baseRate}%</span>
             <span>
@@ -102,10 +137,10 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
 
         {/* Question */}
         <div className="mt-3">
-          <h1 className={`text-xl font-semibold leading-snug ${theme.question}`}>
+          <h1 className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold leading-snug ${theme.question}`}>
             {sample.front_details.intervention_fragment}
           </h1>
-          <div className="mt-1 text-sm opacity-70">
+          <div className="mt-1 text-sm sm:text-base opacity-70">
             {sample.conditions.join(' • ')} • {sample.num_participants} participants
           </div>
           {sample.front_details && <QuestionStyles theme={theme} fragments={sample.front_details} />}
@@ -120,10 +155,16 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
         {state.phase === 'question' && (
           <div className="mt-5 grid grid-cols-2 gap-3">
             <Button size="lg" theme={theme} onClick={onYes}>
-              Yes
+              <span className="inline-flex items-center gap-2">
+                Yes
+                <kbd className="hidden lg:inline text-xs opacity-60 font-mono">[Y]</kbd>
+              </span>
             </Button>
             <Button size="lg" variant="secondary" theme={theme} onClick={onNo}>
-              No
+              <span className="inline-flex items-center gap-2">
+                No
+                <kbd className="hidden lg:inline text-xs opacity-60 font-mono">[N]</kbd>
+              </span>
             </Button>
           </div>
         )}
@@ -144,7 +185,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
                   ? { type: 'spring', stiffness: 260, damping: 18, duration: 0.4 }
                   : { duration: 0.4 }
               }
-              className={`flex items-center gap-2 text-base font-semibold ${
+              className={`flex items-center gap-2 text-base sm:text-lg font-semibold ${
                 state.correct 
                   ? (theme.key === 'retroDark' ? 'text-amber-300' : 'text-amber-600')
                   : 'text-rose-500'
@@ -167,7 +208,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
               </motion.div>
             )}
             
-            <div className="text-[15px] opacity-90">
+            <div className="text-[15px] sm:text-base opacity-90">
               The study {sample.success ? 'found' : 'did not find'} a significant effect (p={sample.p_value}).{' '}
               <a
                 className="inline-flex items-center gap-1 opacity-70 hover:opacity-90 underline underline-offset-2"
@@ -179,7 +220,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
               </a>
             </div>
             
-            <div className="text-sm opacity-70">
+            <div className="text-sm sm:text-base opacity-70">
               {sample.num_participants} participants in this study.
             </div>
             
@@ -215,7 +256,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({ theme, allCards, select
         )}
 
         {/* Footer */}
-        <div className="mt-4 flex items-center justify-between text-xs opacity-70">
+        <div className="mt-4 flex items-center justify-between text-xs sm:text-sm opacity-70">
           <button
             onClick={() => setState((s) => ({ ...s, openDetails: true }))}
             className="hover:opacity-100 inline-flex items-center gap-1"
