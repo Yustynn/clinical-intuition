@@ -3,7 +3,34 @@ import { Sheet, Button } from '../../components/ui';
 import { useAuth } from '../../hooks/useAuth';
 import { updateUsername, isUsernameAvailable } from '../../lib/supabaseService';
 import { supabase } from '../../lib/supabase';
+import { STORAGE_KEYS } from '../../constants';
 import type { Theme } from '../../utils/theme';
+
+// Helper to get total cards played from localStorage
+function getTotalCardsPlayed(): number {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.DECK_STATS);
+    if (!stored) return 0;
+
+    const stats = JSON.parse(stored);
+    return Object.values(stats).reduce((total: number, deck: any) => {
+      return total + (deck.cardsPlayed || 0);
+    }, 0);
+  } catch {
+    return 0;
+  }
+}
+
+// Helper to clear all localStorage data
+function clearAllProgress() {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.DECK_STATS);
+    localStorage.removeItem(STORAGE_KEYS.CARD_ANSWERS);
+    localStorage.removeItem(STORAGE_KEYS.ANSWERED_CARD_IDS);
+  } catch (error) {
+    console.error('Failed to clear localStorage:', error);
+  }
+}
 
 interface AuthModalProps {
   open: boolean;
@@ -21,7 +48,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
   const [needsUsername, setNeedsUsername] = useState(false);
   const [existingUsername, setExistingUsername] = useState<string | null>(null);
 
+  // Merge confirmation state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [mergeChoice, setMergeChoice] = useState<'keep' | 'reset'>('keep');
+  const [pendingAuth, setPendingAuth] = useState<'google' | 'email' | null>(null);
+  const [localCardsCount, setLocalCardsCount] = useState(0);
+
+  // Reset confirmation state
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+
   const handleGoogleSignIn = async () => {
+    // Check for local progress first
+    const cardsPlayed = getTotalCardsPlayed();
+    if (cardsPlayed > 0) {
+      setLocalCardsCount(cardsPlayed);
+      setPendingAuth('google');
+      setShowMergeDialog(true);
+      return;
+    }
+
+    // No local progress, proceed directly
+    proceedWithGoogleSignIn();
+  };
+
+  const proceedWithGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
 
@@ -35,6 +86,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
 
   const handleMagicLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check for local progress first
+    const cardsPlayed = getTotalCardsPlayed();
+    if (cardsPlayed > 0) {
+      setLocalCardsCount(cardsPlayed);
+      setPendingAuth('email');
+      setShowMergeDialog(true);
+      return;
+    }
+
+    // No local progress, proceed directly
+    proceedWithMagicLink();
+  };
+
+  const proceedWithMagicLink = async () => {
     setLoading(true);
     setError(null);
 
@@ -58,6 +124,38 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
       onClose();
     }
     setLoading(false);
+  };
+
+  const handleMergeConfirm = () => {
+    if (mergeChoice === 'reset') {
+      clearAllProgress();
+    }
+
+    setShowMergeDialog(false);
+
+    // Proceed with pending auth
+    if (pendingAuth === 'google') {
+      proceedWithGoogleSignIn();
+    } else if (pendingAuth === 'email') {
+      proceedWithMagicLink();
+    }
+
+    setPendingAuth(null);
+  };
+
+  const handleResetConfirm = () => {
+    if (resetConfirmText.toUpperCase() !== 'RESET') {
+      setError('Please type RESET to confirm');
+      return;
+    }
+
+    clearAllProgress();
+    setShowResetDialog(false);
+    setResetConfirmText('');
+    setError(null);
+
+    // Reload the page to refresh state
+    window.location.reload();
   };
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
@@ -122,6 +220,127 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
     checkUsername();
   }, [user]);
 
+  // Merge confirmation dialog
+  if (showMergeDialog) {
+    return (
+      <Sheet open={open} onClose={() => {}} title={`You've played ${localCardsCount} cards!`} theme={theme}>
+        <div className="grid gap-4">
+          <div className="text-sm opacity-80">
+            What would you like to do with your progress?
+          </div>
+
+          <div className="grid gap-2">
+            <label className={`flex items-start gap-3 p-3 ${theme.btnRadius} border cursor-pointer transition-all ${
+              mergeChoice === 'keep' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'border-amber-300 hover:border-amber-400'
+            }`}>
+              <input
+                type="radio"
+                name="merge"
+                checked={mergeChoice === 'keep'}
+                onChange={() => setMergeChoice('keep')}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="font-medium">✅ Keep my progress</div>
+                <div className="text-xs opacity-70 mt-1">{localCardsCount} cards will be saved to your account</div>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-3 ${theme.btnRadius} border cursor-pointer transition-all ${
+              mergeChoice === 'reset' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'border-amber-300 hover:border-amber-400'
+            }`}>
+              <input
+                type="radio"
+                name="merge"
+                checked={mergeChoice === 'reset'}
+                onChange={() => setMergeChoice('reset')}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="font-medium">🔄 Start fresh</div>
+                <div className="text-xs opacity-70 mt-1">Begin with 0 cards (current progress will be deleted)</div>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              theme={theme}
+              variant="secondary"
+              className="flex-1 justify-center"
+              onClick={() => {
+                setShowMergeDialog(false);
+                setPendingAuth(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              theme={theme}
+              className="flex-1 justify-center"
+              onClick={handleMergeConfirm}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      </Sheet>
+    );
+  }
+
+  // Reset confirmation dialog
+  if (showResetDialog) {
+    const cardsPlayed = getTotalCardsPlayed();
+    return (
+      <Sheet open={open} onClose={() => setShowResetDialog(false)} title="Reset all progress?" theme={theme}>
+        <div className="grid gap-4">
+          <div className="text-sm opacity-80">
+            This will permanently delete your {cardsPlayed} cards of progress. This action cannot be undone.
+          </div>
+
+          <div className={`p-3 ${theme.btnRadius} bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800`}>
+            <div className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">⚠️ Danger Zone</div>
+            <div className="text-xs opacity-70">To confirm, type <strong>RESET</strong> below:</div>
+            <input
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              type="text"
+              placeholder="Type RESET"
+              className={`mt-2 h-10 px-3 w-full ${theme.btnRadius} border border-red-300 dark:border-red-800 ${
+                theme.key === 'retroDark' ? 'bg-black text-red-400' : 'bg-white text-red-600'
+              }`}
+            />
+          </div>
+
+          {error && <div className="text-xs text-red-500">{error}</div>}
+
+          <div className="flex gap-2">
+            <Button
+              theme={theme}
+              variant="secondary"
+              className="flex-1 justify-center"
+              onClick={() => {
+                setShowResetDialog(false);
+                setResetConfirmText('');
+                setError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              theme={theme}
+              className="flex-1 justify-center"
+              onClick={handleResetConfirm}
+              disabled={resetConfirmText.toUpperCase() !== 'RESET'}
+            >
+              Reset Progress
+            </Button>
+          </div>
+        </div>
+      </Sheet>
+    );
+  }
+
   // If user needs to set username
   if (user && needsUsername) {
     return (
@@ -156,6 +375,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
 
   // If user is already signed in
   if (user && !needsUsername) {
+    const cardsPlayed = getTotalCardsPlayed();
     return (
       <Sheet open={open} onClose={onClose} title="Account" theme={theme}>
         <div className="grid gap-3">
@@ -176,6 +396,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
           >
             {loading ? 'Signing out...' : 'Sign out'}
           </Button>
+
+          {/* Reset button for signed-in users */}
+          {cardsPlayed > 0 && (
+            <div className="border-t border-amber-300 pt-3 mt-2">
+              <div className="text-xs opacity-70 mb-2">Danger Zone</div>
+              <button
+                onClick={() => setShowResetDialog(true)}
+                className="text-xs text-red-500 hover:text-red-600 underline"
+              >
+                Reset all progress ({cardsPlayed} cards)
+              </button>
+            </div>
+          )}
+
           {error && <div className="text-xs text-red-500">{error}</div>}
         </div>
       </Sheet>
@@ -207,6 +441,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
   }
 
   // Sign in form
+  const cardsPlayed = getTotalCardsPlayed();
   return (
     <Sheet open={open} onClose={onClose} title="Save your streak & compare with friends" theme={theme}>
       <div className="grid gap-3">
@@ -237,6 +472,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose, theme }) => {
         </form>
         {error && <div className="text-xs text-red-500 text-center">{error}</div>}
         <div className="text-xs opacity-60 text-center">No passwords. One-tap login.</div>
+
+        {/* Reset button for anonymous users */}
+        {cardsPlayed > 0 && (
+          <div className="border-t border-amber-300 pt-3 mt-2 text-center">
+            <div className="text-xs opacity-70 mb-2">Playing anonymously?</div>
+            <button
+              onClick={() => setShowResetDialog(true)}
+              className="text-xs text-red-500 hover:text-red-600 underline"
+            >
+              Reset progress ({cardsPlayed} cards)
+            </button>
+          </div>
+        )}
       </div>
     </Sheet>
   );
