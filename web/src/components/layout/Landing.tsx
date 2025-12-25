@@ -21,7 +21,7 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
   const { user } = useAuth();
   const playsRef = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
-  const [selectedDeck, setSelectedDeck] = useState<string | null>(null);
+  const [selectedDeck, setSelectedDeck] = useState<string | null>('Depression');
   const [username, setUsername] = useState<string | null>(null);
 
   const onPlayed = () => {
@@ -101,16 +101,6 @@ const Landing: React.FC<LandingProps> = ({ theme, mode, onModeChange, allCards, 
       {/* Deck filter */}
       <div className="w-full max-w-[420px]">
         <div className="flex flex-wrap gap-2 text-sm">
-          <button
-            onClick={() => setSelectedDeck(null)}
-            className={`px-3 py-1.5 ${theme.btnRadius} border transition-all ${
-              selectedDeck === null
-                ? `${theme.primaryBtn} font-medium`
-                : `${theme.secondaryBtn} opacity-70 hover:opacity-100`
-            }`}
-          >
-            {allDecksOption.deck} ({allDecksOption.count})
-          </button>
           {deckCounts.map(({ deck, count }) => (
             <button
               key={deck}
