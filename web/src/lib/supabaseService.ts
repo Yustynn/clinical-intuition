@@ -127,8 +127,20 @@ export async function saveCardAnswer(
   userId: string,
   answer: CardAnswer
 ) {
+  const callId = Math.random().toString(36).substring(7);
+  console.log(`💾 [${callId}] saveCardAnswer called:`, {
+    userId: userId.substring(0, 8),
+    cardId: answer.card_id,
+    answer: answer.answer,
+    correct: answer.correct,
+    stack: new Error().stack?.split('\n')[2]?.trim(), // Show caller
+  });
+
   // Ensure user exists first to avoid foreign key constraint errors
   await ensureUserExists(userId);
+
+  const timestamp = new Date().toISOString();
+  console.log(`💾 [${callId}] Inserting to Supabase at ${timestamp}`);
 
   const { error } = await supabase
     .from('card_answers')
@@ -138,13 +150,15 @@ export async function saveCardAnswer(
       deck_name: answer.deck_name,
       answer: answer.answer,
       correct: answer.correct,
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
 
   if (error) {
-    console.error('Error saving card answer:', error);
+    console.error(`❌ [${callId}] Error saving card answer:`, error);
     throw error;
   }
+
+  console.log(`✅ [${callId}] Card answer saved successfully`);
 }
 
 /**

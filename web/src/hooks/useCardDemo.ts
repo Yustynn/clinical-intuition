@@ -244,6 +244,14 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
   }, [state.idx, state.phase]);
 
   const answer = async (choice: 'Yes' | 'No') => {
+    const answerId = Math.random().toString(36).substring(7);
+    console.log(`🎯 [${answerId}] answer() called:`, {
+      cardId: sample.card_id,
+      choice,
+      phase: state.phase,
+      authenticated: !!user,
+    });
+
     const correctAnswer = sample.success ? 'Yes' : 'No';
     const isCorrect = choice === correctAnswer;
     const newCardsPlayed = state.cardsPlayed + 1;
@@ -255,6 +263,7 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
     // Track the answer
     trackCardAnswered(choice.toLowerCase() as 'yes' | 'no', isCorrect, newCardsPlayed);
 
+    // Update state first (pure function, no side effects)
     setState((s) => {
       const newTotalCorrect = isCorrect ? s.totalCorrect + 1 : s.totalCorrect;
       const newTotalWrong = !isCorrect ? s.totalWrong + 1 : s.totalWrong;
@@ -272,57 +281,10 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
       // Save to localStorage (always)
       saveDeckStats(updatedDeckStats);
 
-      // Save card answer to localStorage (always, even for anonymous users)
-      saveCardAnswerToLocal({
-        card_id: sample.card_id,
-        deck_name: s.currentDeckKey,
-        answer: choice,
-        correct: isCorrect,
-      });
-
       // Track answered card ID
       const newAnsweredCardIds = new Set(s.answeredCardIds);
       newAnsweredCardIds.add(sample.card_id);
       saveAnsweredCardIds(newAnsweredCardIds);
-
-      // Save to Supabase if user is signed in (async, don't block UI)
-      if (user) {
-        console.log('🔵 User authenticated, saving to Supabase:', {
-          userId: user.id,
-          email: user.email,
-          deck: s.currentDeckKey,
-          cardId: sample.card_id,
-        });
-
-        const deckStats = updatedDeckStats[s.currentDeckKey];
-
-        // Save deck stats
-        upsertDeckStats(user.id, s.currentDeckKey, deckStats)
-          .then(() => {
-            console.log('✅ Deck stats saved successfully to Supabase');
-          })
-          .catch((err) => {
-            console.error('❌ Failed to sync deck stats to Supabase:', err);
-            console.error('Full error details:', JSON.stringify(err, null, 2));
-          });
-
-        // Save individual card answer
-        saveCardAnswer(user.id, {
-          card_id: sample.card_id,
-          deck_name: s.currentDeckKey,
-          answer: choice,
-          correct: isCorrect,
-        })
-          .then(() => {
-            console.log('✅ Card answer saved successfully to Supabase');
-          })
-          .catch((err) => {
-            console.error('❌ Failed to save card answer to Supabase:', err);
-            console.error('Full error details:', JSON.stringify(err, null, 2));
-          });
-      } else {
-        console.log('⚪ User not authenticated, saving only to localStorage');
-      }
 
       return {
         ...s,
@@ -342,6 +304,57 @@ export function useCardDemo(allCards: PredictionCard[], selectedDeck: string | n
         answeredCardIds: newAnsweredCardIds,
       };
     });
+
+    // AFTER state update, save to Supabase (side effects outside setState)
+    if (user) {
+      // For authenticated users, save directly to Supabase (skip localStorage to avoid duplicates)
+      console.log(`🔵 [${answerId}] User authenticated, saving to Supabase:`, {
+        userId: user.id,
+        email: user.email,
+        deck: state.currentDeckKey,
+        cardId: sample.card_id,
+      });
+
+      const deckStats = {
+        totalCorrect: isCorrect ? state.totalCorrect + 1 : state.totalCorrect,
+        totalWrong: !isCorrect ? state.totalWrong + 1 : state.totalWrong,
+        cardsPlayed: newCardsPlayed,
+      };
+
+      // Save deck stats
+      upsertDeckStats(user.id, state.currentDeckKey, deckStats)
+        .then(() => {
+          console.log(`✅ [${answerId}] Deck stats saved successfully to Supabase`);
+        })
+        .catch((err) => {
+          console.error(`❌ [${answerId}] Failed to sync deck stats to Supabase:`, err);
+          console.error('Full error details:', JSON.stringify(err, null, 2));
+        });
+
+      // Save individual card answer
+      saveCardAnswer(user.id, {
+        card_id: sample.card_id,
+        deck_name: state.currentDeckKey,
+        answer: choice,
+        correct: isCorrect,
+      })
+        .then(() => {
+          console.log(`✅ [${answerId}] Card answer saved successfully to Supabase`);
+        })
+        .catch((err) => {
+          console.error(`❌ [${answerId}] Failed to save card answer to Supabase:`, err);
+          console.error('Full error details:', JSON.stringify(err, null, 2));
+        });
+    } else {
+      // For anonymous users, save card answer to localStorage as fallback
+      console.log(`⚪ [${answerId}] User not authenticated, saving card answer to localStorage`);
+      saveCardAnswerToLocal({
+        card_id: sample.card_id,
+        deck_name: state.currentDeckKey,
+        answer: choice,
+        correct: isCorrect,
+      });
+    }
 
     haptics(isCorrect ? 30 : [40, 60, 40]);
 
